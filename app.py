@@ -14,6 +14,13 @@ st.set_page_config(
     layout="wide"
 )
 
+# Chargement du CSS
+try:
+    with open('styles.css') as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+except FileNotFoundError:
+    st.error("Le fichier styles.css est introuvable. Assurez-vous qu'il est dans le même répertoire que app.py.")
+
 # ----------------------------
 # FONCTIONS FBREF
 # ----------------------------
@@ -25,18 +32,21 @@ def load_fbref_data():
     passing_stats = pd.read_csv('PSG Passing.csv')
     possession_stats = pd.read_csv('PSG Possession.csv')
     playing_time = pd.read_csv('PSG Playing Time.csv')
+    goalkeeping_stats = pd.read_csv('PSG Goalkeeping.csv')
     
     # Nettoyage des données
-    for df in [standard_stats, shooting_stats, passing_stats, possession_stats, playing_time]:
+    for df in [standard_stats, shooting_stats, passing_stats, possession_stats, playing_time, goalkeeping_stats]:
         df['Player'] = df['Player'].str.strip()
-        df['Pos'] = df['Pos'].str.strip()
+        if 'Pos' in df.columns:
+            df['Pos'] = df['Pos'].str.strip()
     
     return {
         'standard': standard_stats,
         'shooting': shooting_stats,
         'passing': passing_stats,
         'possession': possession_stats,
-        'playing_time': playing_time
+        'playing_time': playing_time,
+        'goalkeeping': goalkeeping_stats
     }
 
 def create_scatter_plot(data, x_col, y_col, color_col, size_col, title, hover_data=None):
@@ -514,11 +524,12 @@ def analyze_tactical_patterns():
     with col1:
         st.subheader("Phases de Jeu")
         # Calcul des métriques de pressing avec les colonnes disponibles
+        # Arrondissement des valeurs
         pressing_metrics = {
-            "Passes complétées": data['passing']['Cmp'].mean(),
+            "Passes complétées": round(data['passing']['Cmp'].mean(), 2),
             "Précision des passes": f"{data['passing']['Cmp%'].mean():.1f}%",
-            "Passes progressives": data['passing']['PrgP'].mean(),
-            "Passes clés": data['passing']['KP'].mean()
+            "Passes progressives": round(data['passing']['PrgP'].mean(), 2),
+            "Passes clés": round(data['passing']['KP'].mean(), 2)
         }
         
         for metric, value in pressing_metrics.items():
@@ -526,10 +537,11 @@ def analyze_tactical_patterns():
     
     with col2:
         st.subheader("Progression du Jeu")
+        # Arrondissement des valeurs
         progression_metrics = {
-            "Passes progressives": data['passing']['PrgP'].mean(),
-            "Progression portée": data['standard']['PrgC'].mean(),
-            "Progression reçue": data['standard']['PrgR'].mean(),
+            "Passes progressives": round(data['passing']['PrgP'].mean(), 2),
+            "Progression portée": round(data['standard']['PrgC'].mean(), 2),
+            "Progression reçue": round(data['standard']['PrgR'].mean(), 2),
             "Distance totale des passes": f"{data['passing']['TotDist'].mean():.1f}"
         }
         
@@ -632,6 +644,83 @@ def analyze_defensive_metrics():
     )
     
     st.plotly_chart(fig, use_container_width=True)
+
+def analyze_goalkeeping_performance():
+    """Analyse des performances des gardiens"""
+    data = load_fbref_data()
+    
+    st.header("Analyse des Gardiens")
+    
+    goalkeepers = data['goalkeeping'].copy() # Utiliser une copie pour éviter SettingWithCopyWarning
+    
+    if goalkeepers.empty:
+        st.info("Aucune donnée de gardien disponible.")
+        return
+    
+    # Conversion des colonnes numériques (spécifiques aux gardiens)
+    # J'ai mis à jour la liste des colonnes en fonction du fichier CSV disponible
+    numeric_gk_columns = [
+        'GA', 'GA90', 'SoTA', 'Saves', 'Save%', 'W', 'D', 'L', 'CS', 'CS%', 'PKatt', 'PKA', 'PKsv', 'PKm', 'Save%.1'
+    ]
+    
+    for col in numeric_gk_columns:
+        if col in goalkeepers.columns:
+            # Convertir en numérique et remplir les NaN avec 0
+            goalkeepers[col] = pd.to_numeric(goalkeepers[col], errors='coerce').fillna(0)
+            
+    # Sélection du gardien
+    gk_names = goalkeepers['Player'].tolist()
+    selected_gk = st.selectbox("Sélectionnez un gardien", gk_names, key="goalkeeper_select")
+    
+    selected_gk_data = goalkeepers[goalkeepers['Player'] == selected_gk].iloc[0]
+    
+    # Affichage des métriques clés
+    st.subheader(f"Statistiques pour {selected_gk}")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Matches joués", selected_gk_data['MP'])
+        st.metric("Minutes jouées", selected_gk_data['Min'])
+        st.metric("Buts encaissés", selected_gk_data['GA'])
+        st.metric("Buts encaissés p90", round(selected_gk_data['GA90'], 2))
+    
+    with col2:
+        st.metric("Arrêts", selected_gk_data['Saves'])
+        st.metric("Pourcentage d\'arrêts", f"{round(selected_gk_data['Save%'], 1)}%")
+        st.metric("Clean Sheets", selected_gk_data['CS'])
+        st.metric("Pourcentage Clean Sheets", f"{round(selected_gk_data['CS%'], 1)}%")
+        
+    with col3:
+        st.metric("Arrêts penalty", selected_gk_data['PKsv'])
+        st.metric("Tentatives penalty subies", selected_gk_data['PKatt'])
+        st.metric("Penalty manqués subis", selected_gk_data['PKm'])
+        st.metric("Pourcentage d\'arrêts penalty", f"{round(selected_gk_data['Save%.1'], 1)}%")
+        
+    # Graphique de comparaison des arrêts
+    st.subheader("Arrêts vs Buts encaissés p90")
+    
+    fig_gk = go.Figure()
+    fig_gk.add_trace(go.Bar(
+        name='Arrêts',
+        x=[selected_gk],
+        y=[selected_gk_data['Saves']],
+        marker_color='#2ca02c'
+    ))
+    fig_gk.add_trace(go.Bar(
+        name='Buts encaissés p90',
+        x=[selected_gk],
+        y=[selected_gk_data['GA90']],
+        marker_color='#d62728'
+    ))
+    
+    fig_gk.update_layout(
+        title=f'Comparaison Arrêts vs Buts encaissés p90 - {selected_gk}',
+        yaxis_title='Valeur',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_gk, use_container_width=True)
 
 def analyze_match_performance():
     """Analyse des performances match par match"""
@@ -742,56 +831,64 @@ def analyze_match_performance():
     st.plotly_chart(fig, use_container_width=True)
 
 def render_home():
-    """Fonction principale de l'application"""
-    st.title("PSG Data Center - Saison 2024-2025")
-    
-    # Onglets principaux
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10, tab11 = st.tabs([
+    # Enveloppement du logo et du titre dans un conteneur centré via HTML/CSS
+    centered_header = """
+    <div style='text-align: center;'>
+        <img src='https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg' width='100' style='display: block; margin: 0 auto;'>
+        <h1 style='text-align: center;'>PSG Data Center - Saison 2024-2025</h1>
+    </div>
+    """
+    st.markdown(centered_header, unsafe_allow_html=True)
+
+    # Onglets principaux regroupés
+    tab_overview, tab_individual, tab_collective, tab_goalkeeping = st.tabs([
         "Vue d'ensemble",
-        "Analyse par joueur",
-        "Analyse par position",
-        "Comparaisons",
-        "Analyse Tactique",
-        "Forces et Faiblesses",
-        "Rôles et Profils",
-        "Dynamiques d'Équipe",
-        "Patterns Tactiques",
-        "Analyse Défensive",
-        "Performances par Match"
+        "Analyse individuelle",
+        "Analyse collective",
+        "🧤 Analyse Gardiens"
     ])
-    
-    with tab1:
+
+    with tab_overview:
         render_overview()
-    
-    with tab2:
-        render_player_analysis()
-    
-    with tab3:
-        render_position_analysis()
-    
-    with tab4:
-        render_comparisons()
-        
-    with tab5:
-        analyze_tactical_performance()
-        
-    with tab6:
-        analyze_team_strengths()
-        
-    with tab7:
-        analyze_player_roles()
-        
-    with tab8:
-        analyze_team_dynamics()
-        
-    with tab9:
-        analyze_tactical_patterns()
-        
-    with tab10:
-        analyze_defensive_metrics()
-        
-    with tab11:
-        analyze_match_performance()
+
+    with tab_individual:
+        st.subheader("Analyse individuelle des joueurs")
+        analysis_type = st.radio(
+            "Choisissez une analyse :",
+            ("Analyse par joueur", "Comparaisons", "Rôles et Profils", "Performances par Match"),
+            key="individual_analysis_radio"
+        )
+        if analysis_type == "Analyse par joueur":
+            render_player_analysis()
+        elif analysis_type == "Comparaisons":
+            render_comparisons()
+        elif analysis_type == "Rôles et Profils":
+            analyze_player_roles()
+        elif analysis_type == "Performances par Match":
+            analyze_match_performance()
+
+    with tab_collective:
+        st.subheader("Analyse collective et tactique")
+        analysis_type = st.radio(
+            "Choisissez une analyse :",
+            ("Analyse par position", "Analyse Tactique", "Forces et Faiblesses", "Dynamiques d'Équipe", "Patterns Tactiques", "Analyse Défensive"),
+            key="collective_analysis_radio"
+        )
+        if analysis_type == "Analyse par position":
+            render_position_analysis()
+        elif analysis_type == "Analyse Tactique":
+            analyze_tactical_performance()
+        elif analysis_type == "Forces et Faiblesses":
+            analyze_team_strengths()
+        elif analysis_type == "Dynamiques d'Équipe":
+            analyze_team_dynamics()
+        elif analysis_type == "Patterns Tactiques":
+            analyze_tactical_patterns()
+        elif analysis_type == "Analyse Défensive":
+            analyze_defensive_metrics()
+
+    with tab_goalkeeping:
+        analyze_goalkeeping_performance()
 
 if __name__ == "__main__":
     render_home()

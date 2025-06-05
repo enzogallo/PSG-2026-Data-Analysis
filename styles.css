@@ -1,31 +1,64 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
+/* Styles globaux */
 html, body, .main, .stApp, [class^="css"] {
     font-family: 'Poppins', sans-serif !important;
+    color: white !important; /* Texte blanc par défaut pour contraster avec le fond */
+}
+
+body {
+    color: white !important; /* Le texte du body doit être blanc */
+    background: linear-gradient(180deg, #034694 0%, #1E88E5 100%) !important; /* Dégradé de bleu foncé à bleu clair PSG */
+}
+
+.main > div {
+    background: none !important; /* Supprime le fond blanc potentiellement ajouté par Streamlit */
+    padding: 0 !important; /* Ajuste le padding si nécessaire */
+}
+
+/* Headers */
+h1 {
+    color: white !important; /* Titre blanc */
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center; /* Centre le titre */
+}
+h2 {
+    color: white !important; /* Sous-titres blancs */
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+h3 {
+    color: #E0E0E0 !important; /* Couleur légèrement grisée pour les h3 */
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+h4, h5, h6 {
     color: white !important;
 }
 
-/** === Global Styles === */
-body {
-    color: #1c1c1c !important;
-}
-
-/** === Headers === */
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 600;
-    color: #034694;
-}
-
-/** === Metric Cards === */
-.metric-card {
-    background-color: white;
-    padding: 1.2rem;
-    border-radius: 1rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+/* Métriques */
+.stMetric {
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent */
+    color: white !important; /* Texte blanc */
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     margin-bottom: 1rem;
 }
 
-/** === Buttons === */
+.stMetric > label {
+    color: #E0E0E0 !important; /* Couleur pour les labels des métriques */
+}
+
+.stMetric > div[data-testid="stMetricDelta"] > div {
+    color: white !important; /* Couleur pour la valeur de la métrique */
+}
+
+/* Boutons */
 button, button[kind="secondary"] {
     border-radius: 8px !important;
     font-weight: 600;
@@ -34,12 +67,12 @@ button, button[kind="secondary"] {
 }
 
 button {
-    background-color: #034694 !important;
+    background-color: #034694 !important; /* Bleu foncé PSG */
     color: white !important;
     padding: 0.6rem 1.2rem !important;
 }
 button:hover {
-    background-color: #022e6c !important;
+    background-color: #022e6c !important; /* Bleu foncé PSG au survol */
 }
 
 button[kind="secondary"] {
@@ -55,6 +88,7 @@ button[kind="secondary"]:hover {
     color: white !important;
 }
 
+/* Cartes */
 .card-wrapper:hover {
     opacity: 0.95;
     transform: scale(1.02);
@@ -65,7 +99,7 @@ button[kind="secondary"]:hover {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 4px 14px rgba(0,0,0,0.1);
-    background-color: white;
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent */
     margin-bottom: 1rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     height: 420px;
@@ -106,63 +140,9 @@ button[kind="secondary"]:hover {
     font-weight: 600;
     padding: 0.8rem 0;
     font-size: 0.95rem;
-    color: #034694;
-    background: #f9f9f9;
+    color: white !important; /* Texte blanc */
+    background: rgba(255, 255, 255, 0.15) !important; /* Fond clair semi-transparent */
     width: 100%;
-}
-
-.css-1d391kg, .css-1d1hsi1 {
-    background-color: #034694 !important;
-    color: white !important;
-}
-
-/** === Section Containers === */
-.section-container {
-    background-color: white;
-    padding: 2rem;
-    border-radius: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-}
-
-/** === Inputs & Select === */
-input, select, textarea {
-    border-radius: 6px;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    background-color: #f4f6f9 !important;
-    color: #1c1c1c !important;
-}
-
-/** === Tables === */
-.css-1r6slb0 td {
-    padding: 0.75rem 1rem;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e6e6e6;
-}
-
-/** === Graph Section Titles === */
-.graph-title {
-    font-size: 1.3rem;
-    margin-top: 1.5rem;
-    color: #1c1c1c;
-}
-
-/** === Heatmap container === */
-.heatmap-section {
-    background-color: #ffffff;
-    padding: 1rem;
-    border-radius: 1rem;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-    margin-top: 1rem;
-    margin-bottom: 2rem;
-}
-
-/** === Page Background === */
-main > div {
-    padding: 2rem 2.5rem;
-    background-color: #f0f2f5;
-    border-radius: 10px;
 }
 
 .card-column {
@@ -172,7 +152,118 @@ main > div {
     height: 100%;
 }
 
-/* === Streamlit Tabs as Custom Radio Buttons === */
+/* Conteneurs de section */
+.section-container {
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent */
+    padding: 2rem;
+    border-radius: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* Inputs et Selectbox */
+input, select, textarea,
+.stSelectbox > div > div > div > div > div, /* Le texte affiché dans le selectbox */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input
+{
+    border-radius: 6px;
+    padding: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.9) !important; /* Fond très légèrement transparent pour le champ sélectionné */
+    color: black !important; /* Texte en noir pour une excellente lisibilité */
+}
+
+/* Couleur du texte pour le placeholder dans les inputs */
+.stTextInput > div > div > input::placeholder,
+.stNumberInput > div > div > input::placeholder
+{
+    color: #666666 !important; /* Couleur grise pour le placeholder */
+}
+
+/* Couleur du texte pour le placeholder dans les selectbox (utilise ::before) */
+.stSelectbox > div > div > div > div > div::before {
+     color: #666666 !important; /* Couleur grise pour le placeholder */
+}
+
+/* Couleur du texte pour les options dans le menu déroulant du selectbox */
+.stSelectbox > div > div[role="listbox"] div span {
+     color: black !important; /* Options en noir dans le menu déroulant */
+}
+
+/* Assurer que le texte du label au-dessus des inputs/selects est blanc */
+label {
+    color: white !important;
+}
+
+/* Tables */
+.stDataFrame > div > div > div > div > div > div {
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent pour le tableau */
+    color: white !important;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stDataFrame td {
+    padding: 0.75rem 1rem;
+    background-color: rgba(255, 255, 255, 0.05) !important; /* Fond des cellules légèrement plus transparent */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: white !important;
+}
+
+.stDataFrame th {
+    background-color: rgba(255, 255, 255, 0.15) !important; /* Fond des en-têtes de tableau */
+    color: white !important;
+}
+
+/* Titres de graphique */
+.graph-title {
+    font-size: 1.3rem;
+    margin-top: 1.5rem;
+    color: white !important; /* Titres des graphiques en blanc */
+}
+
+/* Conteneur de Heatmap */
+.heatmap-section {
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent */
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    margin-top: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Tabs */
+div[data-baseweb="tab-list"] {
+    gap: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    justify-content: center;
+}
+
+div[data-baseweb="tab"] {
+    height: 3rem;
+    white-space: pre-wrap;
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent */
+    border-radius: 8px 8px 0 0;
+    gap: 0.5rem;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    color: white !important;
+    font-weight: 500;
+}
+
+div[data-baseweb="tab"]:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+div[data-baseweb="tab"][aria-selected="true"] {
+    background-color: #034694 !important; /* Bleu foncé PSG */
+    color: white !important;
+    border-bottom: 3px solid white !important;
+}
+
+/* Radio Buttons (Custom Tabs) */
 div[data-testid="stRadio"] > div {
     flex-direction: row;
     justify-content: center;
@@ -182,8 +273,8 @@ div[data-testid="stRadio"] > div {
 }
 
 div[data-testid="stRadio"] label {
-    background-color: #64a1f6 !important;
-    color: #ffffffcc !important;
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Fond clair semi-transparent */
+    color: white !important;
     padding: 0.6rem 1.3rem !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
@@ -201,23 +292,85 @@ div[data-testid="stRadio"] input[type="radio"] {
 
 /* Tab sélectionnée */
 div[data-testid="stRadio"] label[data-selected="true"] {
-    background-color: #034694 !important;
+    background-color: #034694 !important; /* Bleu foncé PSG */
     box-shadow: 0 0 10px rgba(3, 70, 148, 0.6);
 }
 
 /* Hover pour non-sélectionnées */
 div[data-testid="stRadio"] label:not([data-selected="true"]):hover {
-    background-color: #2c3e50 !important;
-    border: 1px solid #034694 !important;
+    background-color: rgba(255, 255, 255, 0.2) !important; /* Légèrement plus opaque au survol */
+    border: none !important;
 }
 
-div.stButton > button, div.stSelectbox > div, .stSlider {
-    background-color: rgba(3, 70, 148, 0.5) !important;
+/* Boutons et Slider */
+div.stButton > button, .stSlider {
+    background-color: #034694 !important; /* Boutons bleus foncés */
     color: white !important;
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
 }
 
-html, body, .main, .stApp, [class^="css"], .stMarkdown, .stButton button, .stSelectbox, .stMetric, .stCaption {
-    font-family: 'Poppins', sans-serif !important;
+/* Ajustements divers pour les couleurs de texte et d'icônes dans Plotly et autres widgets */
+.stPlotlyChart .modebar-container {
     color: white !important;
+}
+
+.stPlotlyChart .plotly > .modebar {
+     color: white !important;
+}
+
+.stMarkdown p, .stMarkdown li {
+    color: #E0E0E0 !important; /* Texte en gris clair */
+}
+
+.stText {
+    color: #E0E0E0 !important; /* Texte en gris clair */
+}
+
+[data-testid="stProgressLabel"] > div {
+     color: white !important;
+}
+
+.plotly .main-svg .modebar-container .modebar .js-modebar-group .modebar-btn {
+     color: white !important;
+}
+
+.plotly .main-svg .modebar-container .modebar .js-modebar-group .modebar-btn svg {
+    fill: white !important;
+}
+
+.js-plotly-plot .plotly .textpoint text {
+    fill: white !important; /* Assure que le texte sur les points des graphiques est lisible */
+}
+
+.legendtext {
+    fill: white !important;
+}
+
+.gtitle, .xtitle, .ytitle, .x2title, .y2title, .ztitle, .coloraxis .colorbar-title {
+     fill: white !important;
+     stroke: white !important;
+}
+
+.xtick, .ytick, .ztick, .x2tick, .y2tick {
+    fill: white !important;
+    stroke: white !important;
+}
+
+.xtick text, .ytick text, .ztick text, .x2tick text, .y2tick text {
+    fill: white !important;
+}
+
+/* Styles pour centrer le logo */
+.stImage > img {
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Assurer que le conteneur de l'image centre son contenu */
+[data-testid="stImage"] {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important; /* Assurez-vous que le conteneur prend toute la largeur disponible */
 }
