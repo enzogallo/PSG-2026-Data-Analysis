@@ -1,0 +1,16 @@
+streamlit
+pandas
+numpy
+plotly
+matplotlib
+seaborn
+mplsoccer
+fpdf
+opencv-python-headless
+easyocr
+statsmodels
+kaleido
+streamlit-card
+streamlit-navigation-bar
+streamlit-option-menu
+streamlit_extras
