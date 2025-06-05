@@ -515,12 +515,12 @@ def analyze_team_dynamics():
 def analyze_tactical_patterns():
     """Analyse des patterns tactiques de l'équipe"""
     data = load_fbref_data()
-    
+
     st.header("Analyse Tactique Avancée")
-    
+
     # Analyse des phases de jeu
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.subheader("Phases de Jeu")
         # Calcul des métriques de pressing avec les colonnes disponibles
@@ -531,10 +531,10 @@ def analyze_tactical_patterns():
             "Passes progressives": round(data['passing']['PrgP'].mean(), 2),
             "Passes clés": round(data['passing']['KP'].mean(), 2)
         }
-        
+
         for metric, value in pressing_metrics.items():
             st.metric(metric, value)
-    
+
     with col2:
         st.subheader("Progression du Jeu")
         # Arrondissement des valeurs
@@ -544,39 +544,40 @@ def analyze_tactical_patterns():
             "Progression reçue": round(data['standard']['PrgR'].mean(), 2),
             "Distance totale des passes": f"{data['passing']['TotDist'].mean():.1f}"
         }
-        
+
         for metric, value in progression_metrics.items():
             st.metric(metric, value)
-    
-    # Analyse des zones de jeu
-    st.subheader("Zones d'Influence")
-    
-    # Création d'une heatmap des zones de jeu
+
+    # Analyse de la Progression par Position
+    st.subheader("Progression par Position")
+
     positions = ['FW', 'MF', 'DF']
-    selected_pos = st.selectbox("Sélectionnez une position", positions, key="tactical_position_select")
-    
-    pos_players = data['standard'][data['standard']['Pos'].str.contains(selected_pos, na=False)]
-    
-    # Création d'une matrice de zones (simulation)
-    zones = np.zeros((5, 5))
-    for _, player in pos_players.iterrows():
-        # Simulation de l'influence dans différentes zones basée sur les statistiques disponibles
-        influence = (player['Gls'] + player['Ast'] + player['PrgP']) / 3
-        zones += influence
-    
-    fig = go.Figure(data=go.Heatmap(
-        z=zones,
-        colorscale='Viridis',
-        showscale=True
-    ))
-    
-    fig.update_layout(
-        title=f'Zones d\'influence - {selected_pos}',
-        xaxis_title='Largeur du terrain',
-        yaxis_title='Longueur du terrain'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+    progression_data = data['standard'][data['standard']['Pos'].str.contains('|'.join(positions), na=False)].copy()
+
+    # Assurez-vous que les colonnes de progression sont numériques
+    progression_cols = ['PrgC', 'PrgP', 'PrgR']
+    for col in progression_cols:
+        if col in progression_data.columns:
+            progression_data[col] = pd.to_numeric(progression_data[col], errors='coerce').fillna(0)
+
+    # Calculer les moyennes par position
+    avg_progression_by_pos = progression_data.groupby('Pos')[progression_cols].mean().reset_index()
+
+    # Renommer les colonnes pour le graphique
+    avg_progression_by_pos = avg_progression_by_pos.rename(columns={
+        'PrgC': 'Progression portée',
+        'PrgP': 'Passes progressives',
+        'PrgR': 'Progression reçue'
+    })
+
+    # Créer un graphique en barres groupées
+    fig_progression = px.bar(avg_progression_by_pos,
+                             x='Pos',
+                             y=['Progression portée', 'Passes progressives', 'Progression reçue'],
+                             title='Progression Moyenne par Position',
+                             barmode='group')
+
+    st.plotly_chart(fig_progression, use_container_width=True)
 
 def analyze_defensive_metrics():
     """Analyse des performances défensives"""
