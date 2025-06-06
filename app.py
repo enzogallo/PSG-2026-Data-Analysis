@@ -121,7 +121,11 @@ def load_fbref_data():
         'passing': passing_stats,
         'possession': possession_stats,
         'playing_time': playing_time,
-        'goalkeeping': goalkeeping_stats
+        'goalkeeping': goalkeeping_stats,
+        'field_players_standard': standard_stats[standard_stats['Position'] != 'GK'].copy(),
+        'field_players_shooting': shooting_stats[shooting_stats['Pos'].str.contains('GK') == False].copy(),
+        'field_players_passing': passing_stats[passing_stats['Pos'].str.contains('GK') == False].copy(),
+        'field_players_possession': possession_stats[possession_stats['Pos'].str.contains('GK') == False].copy()
     }
 
 def create_scatter_plot(data, x_col, y_col, color_col, size_col, title, hover_data=None):
@@ -201,95 +205,199 @@ def render_overview():
     """Affiche la vue d'ensemble des performances de l'équipe"""
     data = load_fbref_data()
     
+    # Utiliser les données des joueurs de champ
+    field_player_data = data['field_players_standard'].copy()
+    
     # Conversion des colonnes numériques
     numeric_columns = ['Gls', 'Ast', 'xG', 'xAG', 'Min', 'MP']
     for col in numeric_columns:
-        if col in data['standard'].columns:
-            data['standard'][col] = pd.to_numeric(data['standard'][col], errors='coerce')
+        if col in field_player_data.columns:
+            field_player_data[col] = pd.to_numeric(field_player_data[col], errors='coerce')
     
     # Calcul des statistiques par 90 minutes
-    data['standard']['Gls/90'] = (data['standard']['Gls'] * 90) / data['standard']['Min']
-    data['standard']['Ast/90'] = (data['standard']['Ast'] * 90) / data['standard']['Min']
+    field_player_data['Gls/90'] = (field_player_data['Gls'] * 90) / field_player_data['Min'].replace(0, np.nan)
+    field_player_data['Ast/90'] = (field_player_data['Ast'] * 90) / field_player_data['Min'].replace(0, np.nan)
     
-    # Statistiques globales
+    # Statistiques globales (joueurs de champ)
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        total_goals = data['standard']['Gls'].sum()
-        total_assists = data['standard']['Ast'].sum()
-        st.metric("Buts marqués", int(total_goals))
-        st.metric("Passes décisives", int(total_assists))
+        total_goals = field_player_data['Gls'].sum()
+        total_assists = field_player_data['Ast'].sum()
+        st.metric("Buts marqués (Joueurs de champ)", int(total_goals))
+        st.metric("Passes décisives (Joueurs de champ)", int(total_assists))
     
     with col2:
-        avg_xg = data['standard']['xG'].mean()
-        avg_xag = data['standard']['xAG'].mean()
-        st.metric("xG moyen par joueur", round(avg_xg, 2))
-        st.metric("xAG moyen par joueur", round(avg_xag, 2))
+        avg_xg = field_player_data['xG'].mean()
+        avg_xag = field_player_data['xAG'].mean()
+        st.metric("xG moyen par joueur (Champ)", round(avg_xg, 2))
+        st.metric("xAG moyen par joueur (Champ)", round(avg_xag, 2))
     
     with col3:
-        total_minutes = data['standard']['Min'].sum()
-        total_matches = data['standard']['MP'].sum()
-        st.metric("Minutes jouées", int(total_minutes))
-        st.metric("Matches joués", int(total_matches))
+        total_minutes = field_player_data['Min'].sum()
+        total_matches = field_player_data['MP'].sum()
+        st.metric("Minutes jouées (Champ)", int(total_minutes))
+        st.metric("Matches joués (Champ)", int(total_matches))
     
-    # Top 5 buteurs
-    st.subheader("Top 5 Buteurs")
-    top_scorers = data['standard'].nlargest(5, 'Gls')[['Player', 'Gls', 'xG', 'Gls/90']]
+    # Top 5 buteurs (Joueurs de champ)
+    st.subheader("Top 5 Buteurs (Joueurs de champ)")
+    top_scorers = field_player_data.nlargest(5, 'Gls')[['Player', 'Gls', 'xG', 'Gls/90']]
     fig_scorers = px.bar(top_scorers, x='Player', y='Gls',
-                        title='Top 5 Buteurs',
+                        title='Top 5 Buteurs (Joueurs de champ)',
                         color='Gls',
                         color_continuous_scale='Blues')
     st.plotly_chart(fig_scorers, use_container_width=True)
     
-    # Top 5 passeurs
-    st.subheader("Top 5 Passeurs")
-    top_assists = data['standard'].nlargest(5, 'Ast')[['Player', 'Ast', 'xAG', 'Ast/90']]
+    # Top 5 passeurs (Joueurs de champ)
+    st.subheader("Top 5 Passeurs (Joueurs de champ)")
+    top_assists = field_player_data.nlargest(5, 'Ast')[['Player', 'Ast', 'xAG', 'Ast/90']]
     fig_assists = px.bar(top_assists, x='Player', y='Ast',
-                        title='Top 5 Passeurs',
+                        title='Top 5 Passeurs (Joueurs de champ)',
                         color='Ast',
                         color_continuous_scale='Greens')
     st.plotly_chart(fig_assists, use_container_width=True)
 
+def get_player_photo(player_name):
+    """Récupère le chemin de la photo d'un joueur"""
+    import os
+    
+    # Mapping des noms de joueurs vers les noms de fichiers
+    player_photo_mapping = {
+        'Arnau Tenas': 'profile_23-24_0000_tenas.png',
+        'Gianluigi Donnarumma': 'profile_24-25_donnarumma.png',
+        'Matvei Safonov': 'profile_24-25_safonov.png',
+        'Achraf Hakimi': 'profile_23-24_0017_hakimi.png',
+        'Presnel Kimpembe': 'profile_23-24_0016_kimpembe.png',
+        'Marquinhos': 'profile_23-24_0004_marquinhos.png',
+        'Lucas Hernández': 'profile_23-24_lucashernandez2.png',
+        'Nuno Mendes': 'profile_23-24_0003_nuno.png',
+        'Lucas Beraldo': 'profile_23-24_0020_beraldo.png',
+        'Yoram Zague': 'profile_24-25_zague.png',
+        'Naoufel El Hannach': 'profile_24-25-elhannach-25.png',
+        'Warren Zaïre-Emery': 'profile_23-24_0005_zaire.png',
+        'Vitinha': 'profile_23-24_0006_vitinha.png',
+        'Fabián Ruiz Peña': 'profile_23-24_0010_ruiz.png',
+        'Gonçalo Ramos': 'profile_23-24_0011_ramos.png',
+        'Ousmane Dembélé': 'profile_23-24_0018_dembele.png',
+        'Lee Kang-in': 'profile_23-24_0014_lee.png',
+        'João Neves': 'profile_23-24_neves.png',
+        'Ibrahim Mbaye': 'profile_24-25_mbaye.png',
+        'Bradley Barcola': 'profile_24-25_barcolav2.png',
+        'Désiré Doué': 'profile_24-25_doue.png',
+        'Khvicha Kvaratskhelia': 'khvicha-2425-profile.png',
+        'Willian Pacho': 'profile_23-24_wpacho.png',
+        'Senny Mayulu': 'profile_23-24_mayuluv2.png'
+    }
+    
+    photo_name = player_photo_mapping.get(player_name)
+    if photo_name:
+        # Utilisation d'un chemin absolu
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        photo_path = os.path.join(base_path, 'assets', 'player_photos', photo_name)
+        
+        # Vérification de l'existence du fichier
+        if os.path.exists(photo_path):
+            return photo_path
+        else:
+            st.warning(f"Photo non trouvée pour {player_name} à {photo_path}")
+            return None
+    return None
+
 def render_player_analysis():
     """Affiche l'analyse détaillée par joueur"""
     data = load_fbref_data()
-    
-    # Sélection du joueur
-    player_names = data['standard']['Player'].tolist()
+
+    # Utiliser les données des joueurs de champ
+    field_players_standard = data['field_players_standard'].copy()
+    field_players_shooting = data['field_players_shooting'].copy()
+    field_players_passing = data['field_players_passing'].copy()
+
+    # Sélection du joueur (parmi les joueurs de champ)
+    player_names = field_players_standard['Player'].tolist()
     selected_player = st.selectbox("Sélectionnez un joueur", player_names, key="player_analysis_select")
-    
-    # Informations de base
-    player_data = data['standard'][data['standard']['Player'] == selected_player].iloc[0]
-    player_shooting = data['shooting'][data['shooting']['Player'] == selected_player].iloc[0]
-    player_passing = data['passing'][data['passing']['Player'] == selected_player].iloc[0]
-    
-    # Affichage des métriques
-    display_player_metrics(player_data, player_passing, player_shooting)
-    
+
+    # Affichage de la photo du joueur et des métriques de base
+    photo_path = get_player_photo(selected_player)
+    if photo_path:
+        try:
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.image(photo_path, width=200, use_container_width=True)
+            with col2:
+                st.subheader(f"Analyse de {selected_player}")
+                
+                # Informations de base
+                player_data = field_players_standard[field_players_standard['Player'] == selected_player]
+
+                if player_data.empty:
+                    st.warning(f"Aucune donnée trouvée pour {selected_player} dans les statistiques standard.")
+                    return
+
+                player_data = player_data.iloc[0] # Récupérer la ligne unique si elle existe
+
+                player_shooting_data = field_players_shooting[field_players_shooting['Player'] == selected_player]
+                player_passing_data = field_players_passing[field_players_passing['Player'] == selected_player]
+
+                # Affichage des métriques
+                col_metrics1, col_metrics2, col_metrics3 = st.columns(3)
+
+                with col_metrics1:
+                    st.metric("Matches joués", player_data['MP'])
+                    st.metric("Minutes jouées", player_data['Min'])
+                    st.metric("Buts", player_data['Gls'])
+                    st.metric("Passes décisives", player_data['Ast'])
+
+                with col_metrics2:
+                    st.metric("xG", round(player_data['xG'], 2))
+                    st.metric("xAG", round(player_data['xAG'], 2))
+                    if not player_shooting_data.empty:
+                        st.metric("Tirs", player_shooting_data.iloc[0]['Sh'])
+                        st.metric("Tirs cadrés", player_shooting_data.iloc[0]['SoT'])
+                    else:
+                        st.text("Tirs : N/A")
+                        st.text("Tirs cadrés : N/A")
+
+                with col_metrics3:
+                    if not player_passing_data.empty:
+                        st.metric("Précision des passes", f"{player_passing_data.iloc[0]['Cmp%']}% ")
+                        st.metric("Passes progressives", player_passing_data.iloc[0]['PrgP'])
+                        st.metric("Passes clés", player_passing_data.iloc[0]['KP'])
+                        st.metric("Centres", player_passing_data.iloc[0]['CrsPA'])
+                    else:
+                        st.text("Précision des passes : N/A")
+                        st.text("Passes progressives : N/A")
+                        st.text("Passes clés : N/A")
+                        st.text("Centres : N/A")
+        except Exception as e:
+            st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
+            st.subheader(f"Analyse de {selected_player}")
+    else:
+        st.subheader(f"Analyse de {selected_player}")
+
     # Graphiques de performance
     st.subheader("Performance offensive")
     fig_offensive = go.Figure()
-    
+
     fig_offensive.add_trace(go.Bar(
         name='Réalisé',
         x=['Buts', 'Passes décisives'],
         y=[player_data['Gls'], player_data['Ast']],
         marker_color=['#1f77b4', '#ff7f0e']
     ))
-    
+
     fig_offensive.add_trace(go.Bar(
         name='Attendu',
         x=['xG', 'xAG'],
         y=[player_data['xG'], player_data['xAG']],
         marker_color=['#2ca02c', '#d62728']
     ))
-    
+
     fig_offensive.update_layout(
         title='Performance offensive',
         barmode='group',
         showlegend=True
     )
-    
+
     st.plotly_chart(fig_offensive, use_container_width=True)
 
 def render_position_analysis():
@@ -314,16 +422,10 @@ def render_position_analysis():
     
     # Filtrage des joueurs par position
     position_players = data['standard'][data['standard']['Position'] == selected_position]
-    
-    # Affichage des positions détaillées
-    st.write("### Positions détaillées")
-    position_details = position_players['Position_Detail'].value_counts()
-    fig_details = px.pie(
-        values=position_details.values,
-        names=position_details.index,
-        title=f'Distribution des positions - {position_names[selected_position]}'
-    )
-    st.plotly_chart(fig_details, use_container_width=True)
+
+    if position_players.empty:
+        st.info(f"Aucune donnée trouvée pour la position {position_names[selected_position]}.")
+        return
     
     # Statistiques moyennes par position
     st.subheader(f"Statistiques moyennes - {position_names[selected_position]}")
@@ -343,29 +445,65 @@ def render_comparisons():
     """Affiche les comparaisons entre joueurs"""
     data = load_fbref_data()
     
-    # Sélection des joueurs à comparer
-    player_names = data['standard']['Player'].tolist()
-    selected_players = st.multiselect("Sélectionnez les joueurs à comparer", player_names, max_selections=3)
+    st.header("Comparaison de joueurs")
+    
+    # Utiliser les données des joueurs de champ pour la sélection
+    field_players_standard = data['field_players_standard'].copy()
+    
+    # Sélection des joueurs à comparer (parmi les joueurs de champ)
+    player_names = field_players_standard['Player'].tolist()
+    selected_players = st.multiselect("Sélectionnez les joueurs à comparer", player_names, max_selections=3, key="comparison_select")
     
     if len(selected_players) > 0:
-        # Filtrage des données pour les joueurs sélectionnés
-        comparison_data = data['standard'][data['standard']['Player'].isin(selected_players)]
+        # Filtrage des données pour les joueurs sélectionnés (utilisant les données complètes pour les métriques)
+        comparison_data = data['standard'][data['standard']['Player'].isin(selected_players)].copy()
+        
+        if comparison_data.empty:
+             st.info("Aucune donnée trouvée pour les joueurs sélectionnés.")
+             return
+        
+        # Affichage des photos et des noms
+        cols = st.columns(len(selected_players))
+        for i, player in enumerate(selected_players):
+            with cols[i]:
+                photo_path = get_player_photo(player)
+                if photo_path:
+                    try:
+                        st.image(photo_path, width=100, use_container_width='auto')
+                    except Exception as e:
+                        st.error(f"Erreur lors de l'affichage de la photo de {player}: {str(e)}")
+                st.subheader(player)
         
         # Création du graphique de comparaison
-        metrics = ['Gls', 'Ast', 'xG', 'xAG', 'PrgC', 'PrgP', 'PrgR']
-        metric_names = ['Buts', 'Passes décisives', 'xG', 'xAG', 'Progrès porté', 'Progrès reçu', 'Progrès dribbles']
+        metrics = ['Gls', 'Ast', 'xG', 'xAG', 'PrgC', 'PrgP']
+        metric_names = ['Buts', 'Passes décisives', 'xG', 'xAG', 'Progrès porté', 'Passes progressives']
         
+        # Récupérer les données des joueurs sélectionnés avec les métriques nécessaires
+        # Assurez-vous que toutes les métriques existent pour éviter les erreurs
+        comparison_metrics_data = comparison_data[['Player'] + [m for m in metrics if m in comparison_data.columns]]
+
+        # Gérer les valeurs NaN pour le graphique
+        for col in comparison_metrics_data.columns:
+            if col != 'Player':
+                 comparison_metrics_data[col] = pd.to_numeric(comparison_metrics_data[col], errors='coerce').fillna(0)
+
         fig_comparison = go.Figure()
         
         for i, player in enumerate(selected_players):
-            player_metrics = comparison_data[comparison_data['Player'] == player][metrics].iloc[0]
-            fig_comparison.add_trace(go.Bar(
-                name=player,
-                x=metric_names,
-                y=player_metrics,
-                text=player_metrics.round(2),
-                textposition='auto',
-            ))
+            player_metrics_row = comparison_metrics_data[comparison_metrics_data['Player'] == player]
+            if not player_metrics_row.empty:
+                player_metrics = player_metrics_row.iloc[0]
+                # S'assurer que les métriques existent avant de les utiliser pour y et text
+                y_values = [player_metrics[metric] if metric in player_metrics else 0 for metric in metrics if metric in comparison_metrics_data.columns]
+                text_values = [round(player_metrics[metric], 2) if metric in player_metrics else "N/A" for metric in metrics if metric in comparison_metrics_data.columns]
+
+                fig_comparison.add_trace(go.Bar(
+                    name=player,
+                    x=[metric_names[metrics.index(m)] for m in metrics if m in comparison_metrics_data.columns], # Utiliser les noms d'affichage corrects
+                    y=y_values,
+                    text=text_values,
+                    textposition='auto',
+                ))
         
         fig_comparison.update_layout(
             title='Comparaison des performances',
@@ -374,6 +512,8 @@ def render_comparisons():
         )
         
         st.plotly_chart(fig_comparison, use_container_width=True)
+    else:
+        st.info("Sélectionnez des joueurs pour afficher la comparaison.")
 
 def analyze_tactical_performance():
     """Analyse des performances tactiques de l'équipe"""
@@ -508,53 +648,135 @@ def analyze_team_strengths():
 def analyze_player_roles():
     """Analyse des rôles et profils des joueurs"""
     data = load_fbref_data()
-    
+
     st.header("Analyse des Rôles et Profils")
-    
-    # Sélection du joueur
-    player_names = data['standard']['Player'].tolist()
+
+    # Utiliser les données des joueurs de champ
+    field_players_standard = data['field_players_standard'].copy()
+    field_players_shooting = data['field_players_shooting'].copy()
+    field_players_passing = data['field_players_passing'].copy()
+
+    # Sélection du joueur (parmi les joueurs de champ)
+    player_names = field_players_standard['Player'].tolist()
     selected_player = st.selectbox("Sélectionnez un joueur", player_names, key="player_roles_select")
-    
+
     # Récupération des données du joueur
-    player_data = data['standard'][data['standard']['Player'] == selected_player].iloc[0]
-    player_passing = data['passing'][data['passing']['Player'] == selected_player].iloc[0]
-    player_shooting = data['shooting'][data['shooting']['Player'] == selected_player].iloc[0]
-    
-    # Profil du joueur
-    st.subheader(f"Profil de {selected_player}")
-    
-    # Création d'un graphique radar pour le profil
-    metrics = {
-        'Buts': player_data['Gls'],
-        'Passes décisives': player_data['Ast'],
-        'xG': player_data['xG'],
-        'xAG': player_data['xAG'],
-        'Passes clés': player_passing['KP'],
-        'Tirs cadrés': player_shooting['SoT']
-    }
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=list(metrics.values()),
-        theta=list(metrics.keys()),
-        fill='toself',
-        name=selected_player
-    ))
-    
-    fig.update_layout(
-        polar=dict(
-            radialaxis=dict(
-                visible=True,
-                range=[0, max(metrics.values()) * 1.2]
+    player_data = field_players_standard[field_players_standard['Player'] == selected_player]
+
+    if player_data.empty:
+        st.warning(f"Aucune donnée standard trouvée pour {selected_player}.")
+        return
+
+    player_data = player_data.iloc[0]
+    player_passing_data = field_players_passing[field_players_passing['Player'] == selected_player]
+    player_shooting_data = field_players_shooting[field_players_shooting['Player'] == selected_player]
+
+    # --- Affichage de la photo et du graphique radar côte à côte ---
+    col_photo, col_radar = st.columns([1, 2]) # Ajuster les proportions si nécessaire
+
+    with col_photo:
+        # Affichage de la photo du joueur
+        photo_path = get_player_photo(selected_player)
+        if photo_path:
+            try:
+                st.image(photo_path, width=200, use_container_width=True)
+            except Exception as e:
+                st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
+        st.subheader(selected_player)
+
+    with col_radar:
+        st.subheader("Profil de performance")
+
+        # Profil du joueur (métriques pour le radar chart)
+        metrics = {
+            'Buts': player_data['Gls'],
+            'Passes décisives': player_data['Ast'],
+            'xG': player_data['xG'],
+            'xAG': player_data['xAG'],
+        }
+
+        if not player_passing_data.empty and 'KP' in player_passing_data.iloc[0]:
+             metrics['Passes clés'] = player_passing_data.iloc[0]['KP']
+
+        if not player_shooting_data.empty and 'SoT' in player_shooting_data.iloc[0]:
+             metrics['Tirs cadrés'] = player_shooting_data.iloc[0]['SoT']
+
+        metrics_to_plot = {k: v for k, v in metrics.items() if pd.notna(v)}
+
+        if not metrics_to_plot:
+             st.info("Pas assez de données pour afficher le profil du joueur.")
+        else:
+            fig = go.Figure()
+            fig.add_trace(go.Scatterpolar(
+                r=list(metrics_to_plot.values()),
+                theta=list(metrics_to_plot.keys()),
+                fill='toself',
+                name=selected_player
+            ))
+
+            fig.update_layout(
+                polar=dict(
+                    radialaxis=dict(
+                        visible=True,
+                        range=[0, max(metrics_to_plot.values()) * 1.2 if metrics_to_plot else 100]
+                    )
+                ),
+                showlegend=False
             )
-        ),
-        showlegend=False
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Affichage des métriques
-    display_player_metrics(player_data, player_passing, player_shooting)
+
+            st.plotly_chart(fig, use_container_width=True)
+
+    # --- Affichage des métriques détaillées en dessous ---
+    st.write("### Métriques détaillées")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("Matches joués", player_data['MP'])
+        st.metric("Minutes jouées", player_data['Min'])
+        st.metric("Buts", player_data['Gls'])
+        st.metric("Passes décisives", player_data['Ast'])
+
+    with col2:
+        if not player_data.empty and 'xG' in player_data:
+             st.metric("xG", round(player_data['xG'], 2))
+        else:
+             st.text("xG : N/A")
+
+        if not player_data.empty and 'xAG' in player_data:
+             st.metric("xAG", round(player_data['xAG'], 2))
+        else:
+             st.text("xAG : N/A")
+
+        if not player_shooting_data.empty and 'Sh' in player_shooting_data.iloc[0]:
+             st.metric("Tirs", player_shooting_data.iloc[0]['Sh'])
+        else:
+             st.text("Tirs : N/A")
+
+        if not player_shooting_data.empty and 'SoT' in player_shooting_data.iloc[0]:
+             st.metric("Tirs cadrés", player_shooting_data.iloc[0]['SoT'])
+        else:
+             st.text("Tirs cadrés : N/A")
+
+    with col3:
+         if not player_passing_data.empty and 'Cmp%' in player_passing_data.iloc[0]:
+             st.metric("Précision des passes", f"{player_passing_data.iloc[0]['Cmp%']}% ")
+         else:
+             st.text("Précision des passes : N/A")
+
+         if not player_passing_data.empty and 'PrgP' in player_passing_data.iloc[0]:
+             st.metric("Passes progressives", player_passing_data.iloc[0]['PrgP'])
+         else:
+             st.text("Passes progressives : N/A")
+
+         if not player_passing_data.empty and 'KP' in player_passing_data.iloc[0]:
+              st.metric("Passes clés", player_passing_data.iloc[0]['KP'])
+         else:
+              st.text("Passes clés : N/A")
+
+         if not player_passing_data.empty and 'CrsPA' in player_passing_data.iloc[0]:
+             st.metric("Centres", player_passing_data.iloc[0]['CrsPA'])
+         else:
+             st.text("Centres : N/A")
 
 def analyze_team_dynamics():
     """Analyse des dynamiques d'équipe"""
@@ -806,6 +1028,7 @@ def analyze_goalkeeping_performance():
                         normalized_value = (gk[metric] - min_val) / (max_val - min_val) * 100
                 else:
                     normalized_value = 50
+                # Corrected indentation
                 values.append(normalized_value)
         
         fig_radar.add_trace(go.Scatterpolar(
@@ -834,26 +1057,41 @@ def analyze_goalkeeping_performance():
     selected_gk = st.selectbox("Sélectionnez un gardien", goalkeepers['Player'].tolist(), key="goalkeeper_select")
     selected_gk_data = goalkeepers[goalkeepers['Player'] == selected_gk].iloc[0]
     
-    # Métriques de performance
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Matches joués", selected_gk_data['MP'])
-        st.metric("Minutes jouées", selected_gk_data['Min'])
-        st.metric("Buts encaissés", selected_gk_data['GA'])
-        st.metric("Buts encaissés p90", f"{selected_gk_data['GA90']:.2f}")
-    
-    with col2:
-        st.metric("Arrêts", selected_gk_data['Saves'])
-        st.metric("Pourcentage d'arrêts", f"{selected_gk_data['Save%']:.1f}%")
-        st.metric("Clean Sheets", selected_gk_data['CS'])
-        st.metric("Pourcentage Clean Sheets", f"{selected_gk_data['CS%']:.1f}%")
-    
-    with col3:
-        st.metric("Arrêts penalty", selected_gk_data['PKsv'])
-        st.metric("Tentatives penalty subies", selected_gk_data['PKatt'])
-        st.metric("Penalty manqués subis", selected_gk_data['PKm'])
-        st.metric("Pourcentage d'arrêts penalty", f"{selected_gk_data['Save%.1']:.1f}%")
+    # Affichage de la photo du gardien et des métriques côte à côte
+    col_photo_gk, col_metrics_gk = st.columns([1, 3]) # Ajuster les proportions si nécessaire
+
+    with col_photo_gk:
+        # Affichage de la photo du gardien
+        photo_path = get_player_photo(selected_gk)
+        if photo_path:
+            try:
+                st.image(photo_path, width=200, use_container_width=True)
+            except Exception as e:
+                st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
+        st.subheader(selected_gk)
+
+    with col_metrics_gk:
+        # Métriques de performance
+        st.write("### Métriques de performance")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Matches joués", selected_gk_data['MP'])
+            st.metric("Minutes jouées", selected_gk_data['Min'])
+            st.metric("Buts encaissés", selected_gk_data['GA'])
+            st.metric("Buts encaissés p90", f"{selected_gk_data['GA90']:.2f}")
+        
+        with col2:
+            st.metric("Arrêts", selected_gk_data['Saves'])
+            st.metric("Pourcentage d'arrêts", f"{selected_gk_data['Save%']:.1f}%")
+            st.metric("Clean Sheets", selected_gk_data['CS'])
+            st.metric("Pourcentage Clean Sheets", f"{selected_gk_data['CS%']:.1f}%")
+        
+        with col3:
+            st.metric("Arrêts penalty", selected_gk_data['PKsv'])
+            st.metric("Tentatives penalty subies", selected_gk_data['PKatt'])
+            st.metric("Penalty manqués subis", selected_gk_data['PKm'])
+            st.metric("Pourcentage d'arrêts penalty", f"{selected_gk_data['Save%.1']:.1f}%")
     
     # Graphique de performance
     st.subheader("Profil de performance")
@@ -918,112 +1156,73 @@ def analyze_goalkeeping_performance():
     st.plotly_chart(fig_scatter, use_container_width=True)
 
 def analyze_match_performance():
-    """Analyse des performances match par match"""
+    """Analyse détaillée des performances par match"""
     data = load_fbref_data()
     
-    st.header("Analyse Match par Match")
-    
-    # Analyse des performances par joueur
-    st.subheader("Performances par Joueur")
+    # Utiliser les données des joueurs de champ
+    field_players_standard = data['field_players_standard'].copy()
+    field_players_shooting = data['field_players_shooting'].copy()
+    field_players_passing = data['field_players_passing'].copy()
     
     # Sélection du joueur
-    player_names = data['standard']['Player'].tolist()
+    player_names = field_players_standard['Player'].tolist()
     selected_player = st.selectbox("Sélectionnez un joueur", player_names, key="match_performance_select")
     
-    # Récupération des données du joueur
-    player_data = data['standard'][data['standard']['Player'] == selected_player].iloc[0]
-    player_shooting = data['shooting'][data['shooting']['Player'] == selected_player].iloc[0]
-    player_passing = data['passing'][data['passing']['Player'] == selected_player].iloc[0]
+    # Affichage de la photo du joueur et des métriques de base
+    photo_path = get_player_photo(selected_player)
+    if photo_path:
+        try:
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.image(photo_path, width=200, use_container_width=True)
+            with col2:
+                st.subheader(f"Performance par match de {selected_player}")
+                
+                # Récupération des données du joueur
+                player_data = field_players_standard[field_players_standard['Player'] == selected_player]
+                player_shooting = field_players_shooting[field_players_shooting['Player'] == selected_player]
+                player_passing = field_players_passing[field_players_passing['Player'] == selected_player]
+                
+                if player_data.empty:
+                    st.warning(f"Aucune donnée trouvée pour {selected_player}")
+                    return
+                
+                # Affichage des métriques
+                col_metrics1, col_metrics2, col_metrics3 = st.columns(3)
+                
+                with col_metrics1:
+                    st.metric("Matches joués", player_data['MP'].iloc[0])
+                    st.metric("Minutes jouées", player_data['Min'].iloc[0])
+                    st.metric("Buts", player_data['Gls'].iloc[0])
+                    st.metric("Passes décisives", player_data['Ast'].iloc[0])
+                
+                with col_metrics2:
+                    st.metric("xG", round(player_data['xG'].iloc[0], 2))
+                    st.metric("xAG", round(player_data['xAG'].iloc[0], 2))
+                    if not player_shooting.empty:
+                        st.metric("Tirs", player_shooting['Sh'].iloc[0])
+                        st.metric("Tirs cadrés", player_shooting['SoT'].iloc[0])
+                    else:
+                        st.text("Tirs : N/A")
+                        st.text("Tirs cadrés : N/A")
+                
+                with col_metrics3:
+                    if not player_passing.empty:
+                        st.metric("Précision des passes", f"{player_passing['Cmp%'].iloc[0]}%")
+                        st.metric("Passes progressives", player_passing['PrgP'].iloc[0])
+                        st.metric("Passes clés", player_passing['KP'].iloc[0])
+                        st.metric("Centres", player_passing['CrsPA'].iloc[0])
+                    else:
+                        st.text("Précision des passes : N/A")
+                        st.text("Passes progressives : N/A")
+                        st.text("Passes clés : N/A")
+                        st.text("Centres : N/A")
+        except Exception as e:
+            st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
+            st.subheader(f"Performance par match de {selected_player}")
+    else:
+        st.subheader(f"Performance par match de {selected_player}")
     
-    # Affichage des statistiques
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Matches joués", player_data['MP'])
-        st.metric("Minutes jouées", player_data['Min'])
-        st.metric("Buts", player_data['Gls'])
-        st.metric("Passes décisives", player_data['Ast'])
-    
-    with col2:
-        st.metric("xG", round(player_data['xG'], 2))
-        st.metric("xAG", round(player_data['xAG'], 2))
-        st.metric("Tirs", player_shooting['Sh'])
-        st.metric("Tirs cadrés", player_shooting['SoT'])
-    
-    with col3:
-        st.metric("Passes complétées", player_passing['Cmp'])
-        st.metric("Passes progressives", player_passing['PrgP'])
-        st.metric("Progression portée", player_data['PrgC'])
-        st.metric("Progression reçue", player_data['PrgR'])
-    
-    # Graphique de performance
-    st.subheader("Profil de Performance")
-    
-    metrics = {
-        'Buts': player_data['Gls'],
-        'Passes décisives': player_data['Ast'],
-        'xG': player_data['xG'],
-        'xAG': player_data['xAG'],
-        'Tirs cadrés': player_shooting['SoT'],
-        'Passes progressives': player_passing['PrgP']
-    }
-    
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        x=list(metrics.keys()),
-        y=list(metrics.values()),
-        marker_color='#1f77b4'
-    ))
-    
-    fig.update_layout(
-        title=f'Profil de performance - {selected_player}',
-        xaxis_title='Métriques',
-        yaxis_title='Valeur',
-        showlegend=False
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Comparaison avec la moyenne de l'équipe
-    st.subheader("Comparaison avec la Moyenne de l'Équipe")
-    
-    team_avg = {
-        'Buts': data['standard']['Gls'].mean(),
-        'Passes décisives': data['standard']['Ast'].mean(),
-        'xG': data['standard']['xG'].mean(),
-        'xAG': data['standard']['xAG'].mean(),
-        'Tirs cadrés': data['shooting']['SoT'].mean(),
-        'Passes progressives': data['passing']['PrgP'].mean()
-    }
-    
-    comparison_data = pd.DataFrame({
-        'Métrique': list(metrics.keys()),
-        'Joueur': list(metrics.values()),
-        'Moyenne Équipe': [team_avg[m] for m in metrics.keys()]
-    })
-    
-    fig_comparison = go.Figure()
-    fig_comparison.add_trace(go.Bar(
-        name='Joueur',
-        x=comparison_data['Métrique'],
-        y=comparison_data['Joueur'],
-        marker_color='#1f77b4'
-    ))
-    
-    fig_comparison.add_trace(go.Bar(
-        name='Moyenne Équipe',
-        x=comparison_data['Métrique'],
-        y=comparison_data['Moyenne Équipe'],
-        marker_color='#ff7f0e'
-    ))
-    
-    fig_comparison.update_layout(
-        title='Comparaison avec la moyenne de l\'équipe',
-        barmode='group',
-        showlegend=True
-    )
-    
-    st.plotly_chart(fig_comparison, use_container_width=True)
 
 @st.cache_data
 def load_ucl_data():
@@ -1176,7 +1375,7 @@ def analyze_ucl_progression():
         title='Progression des actions de création',
         xaxis_title='Match',
         yaxis_title='Valeur',
-        showlegend=True,
+                    showlegend=True,
         xaxis=dict(tickangle=45)
     )
     
@@ -1354,44 +1553,64 @@ def analyze_ucl_player_match():
     match_data = data[selected_match]
     
     # Affichage du score et de la phase
-    col1, col2 = st.columns(2)
-    with col1:
+    col1_info, col2_info = st.columns(2)
+    with col1_info:
         st.metric("Score", match_data['Score'].iloc[0])
-    with col2:
+    with col2_info:
         st.metric("Phase", match_data['Phase'].iloc[0])
     
     # Sélection du joueur
     player_names = match_data['Player'].tolist()
     selected_player = st.selectbox("Sélectionnez un joueur", player_names, key="ucl_player_select")
     
-    player_data = match_data[match_data['Player'] == selected_player].iloc[0]
+    # Récupération des données du joueur pour le match sélectionné
+    player_data_for_match = match_data[match_data['Player'] == selected_player]
     
-    # Métriques détaillées
-    st.write("### Métriques détaillées")
+    if player_data_for_match.empty:
+        st.warning(f"Aucune donnée trouvée pour {selected_player} dans le match {selected_match}.")
+        return
+        
+    player_data = player_data_for_match.iloc[0]
     
-    col1, col2, col3 = st.columns(3)
+    # --- Affichage de la photo et des métriques côte à côte ---
+    col_photo_ucl, col_metrics_ucl = st.columns([1, 3]) # Ajuster les proportions si nécessaire
+
+    with col_photo_ucl:
+        # Affichage de la photo du joueur
+        photo_path = get_player_photo(selected_player)
+        if photo_path:
+            try:
+                st.image(photo_path, width=200, use_container_width=True)
+            except Exception as e:
+                st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
+        # Optionnel : Afficher le nom du joueur sous la photo
+        st.subheader(selected_player)
+
+    with col_metrics_ucl:
+        st.write("### Métriques détaillées")
+        
+        col1_stats, col2_stats, col3_stats = st.columns(3)
+
+        with col1_stats:
+            st.metric("Minutes jouées", player_data['Min'])
+            st.metric("Buts", player_data['Gls'])
+            st.metric("xG", f"{player_data['xG']:.2f}")
+            st.metric("Tirs", player_data['Sh'])
+            st.metric("Tirs cadrés", player_data['SoT'])
+
+        with col2_stats:
+            st.metric("Passes décisives", player_data['Ast'])
+            st.metric("xAG", f"{player_data['xAG']:.2f}")
+            st.metric("Actions de création", player_data['SCA'])
+            st.metric("Actions de création de buts", player_data['GCA'])
+        
+        with col3_stats:
+            st.metric("Passes progressives", player_data['PrgP'])
+            st.metric("Progression portée", player_data['PrgC'])
     
-    with col1:
-        st.metric("Minutes jouées", player_data['Min'])
-        st.metric("Buts", player_data['Gls'])
-        st.metric("xG", f"{player_data['xG']:.2f}")
-        st.metric("Tirs", player_data['Sh'])
-        st.metric("Tirs cadrés", player_data['SoT'])
-    
-    with col2:
-        st.metric("Passes décisives", player_data['Ast'])
-        st.metric("xAG", f"{player_data['xAG']:.2f}")
-        st.metric("Actions de création", player_data['SCA'])
-        st.metric("Actions de création de buts", player_data['GCA'])
-    
-    with col3:
-        st.metric("Passes progressives", player_data['PrgP'])
-        st.metric("Progression portée", player_data['PrgC'])
-    
-    # Graphique radar des performances
+    # Graphique radar des performances (reste en dessous)
     st.write("### Profil de performance")
     
-    # Utilisation des noms de colonnes exacts
     metrics = {
         'Gls': player_data['Gls'],
         'Ast': player_data['Ast'],
@@ -1403,7 +1622,6 @@ def analyze_ucl_player_match():
         'PrgP': player_data['PrgP']
     }
     
-    # Noms d'affichage pour le graphique
     display_names = {
         'Gls': 'Buts',
         'Ast': 'Passes décisives',
@@ -1415,7 +1633,6 @@ def analyze_ucl_player_match():
         'PrgP': 'Passes progressives'
     }
     
-    # Normalisation des valeurs pour le graphique radar
     max_values = {
         'Gls': 3,
         'Ast': 2,
@@ -1609,8 +1826,8 @@ def render_home():
         "Vue d'ensemble",
         "Analyse individuelle",
         "Analyse collective",
-        "🏆 Ligue des Champions",
-        "🧤 Analyse Gardiens"
+        "Ligue des Champions",
+        "Analyse Gardiens"
     ])
 
     with tab_overview:
@@ -1620,7 +1837,7 @@ def render_home():
         st.subheader("Analyse individuelle des joueurs")
         analysis_type = st.radio(
             "Choisissez une analyse :",
-            ("Analyse par joueur", "Comparaisons", "Rôles et Profils", "Performances par Match"),
+            ("Analyse par joueur", "Comparaisons", "Rôles et Profils"),
             key="individual_analysis_radio"
         )
         if analysis_type == "Analyse par joueur":
@@ -1629,8 +1846,6 @@ def render_home():
             render_comparisons()
         elif analysis_type == "Rôles et Profils":
             analyze_player_roles()
-        elif analysis_type == "Performances par Match":
-            analyze_match_performance()
 
     with tab_collective:
         st.subheader("Analyse collective et tactique")
@@ -1657,6 +1872,160 @@ def render_home():
 
     with tab_goalkeeping:
         analyze_goalkeeping_performance()
+
+def analyze_ucl_match_performance():
+    """Analyse détaillée des performances par match en Ligue des Champions"""
+    ucl_data = load_ucl_data()
+    
+    # Sélection du joueur
+    all_players = set()
+    for match_data in ucl_data.values():
+        all_players.update(match_data['Player'].unique())
+    player_names = sorted(list(all_players))
+    selected_player = st.selectbox("Sélectionnez un joueur", player_names, key="ucl_match_performance_select")
+    
+    # Affichage de la photo du joueur
+    photo_path = get_player_photo(selected_player)
+    if photo_path:
+        try:
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                st.image(photo_path, width=200, use_container_width=True)
+            with col2:
+                st.subheader(f"Performance par match de {selected_player} en Ligue des Champions")
+        except Exception as e:
+            st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
+            st.subheader(f"Performance par match de {selected_player} en Ligue des Champions")
+    else:
+        st.subheader(f"Performance par match de {selected_player} en Ligue des Champions")
+    
+    # Récupérer les données du joueur pour chaque match
+    player_matches = []
+    for match_name, match_data in sorted(ucl_data.items(), key=lambda x: x[1]['Ordre'].iloc[0]):
+        player_match_data = match_data[match_data['Player'] == selected_player]
+        if not player_match_data.empty:
+            player_matches.append({
+                'Match': match_name,
+                'Phase': match_data['Phase'].iloc[0],
+                'Score': match_data['Score'].iloc[0],
+                'Gls': player_match_data['Gls'].iloc[0],
+                'Ast': player_match_data['Ast'].iloc[0],
+                'Min': player_match_data['Min'].iloc[0],
+                'Tkl': player_match_data['Tkl'].iloc[0] if 'Tkl' in player_match_data else 0,
+                'Int': player_match_data['Int'].iloc[0] if 'Int' in player_match_data else 0,
+                'Blocks': player_match_data['Blocks'].iloc[0] if 'Blocks' in player_match_data else 0,
+                'Clr': player_match_data['Clr'].iloc[0] if 'Clr' in player_match_data else 0
+            })
+    
+    if player_matches:
+        # Création du graphique offensif
+        fig_offensive = go.Figure()
+        
+        # Ajout des barres pour les buts et passes décisives
+        fig_offensive.add_trace(go.Bar(
+            name='Buts',
+            x=[m['Match'] for m in player_matches],
+            y=[m['Gls'] for m in player_matches],
+            marker_color='#1f77b4',
+            text=[f"{m['Score']}" for m in player_matches],
+            hovertemplate="Match: %{x}<br>Score: %{text}<br>Buts: %{y}<extra></extra>"
+        ))
+        
+        fig_offensive.add_trace(go.Bar(
+            name='Passes décisives',
+            x=[m['Match'] for m in player_matches],
+            y=[m['Ast'] for m in player_matches],
+            marker_color='#ff7f0e',
+            text=[f"{m['Score']}" for m in player_matches],
+            hovertemplate="Match: %{x}<br>Score: %{text}<br>Passes décisives: %{y}<extra></extra>"
+        ))
+        
+        # Mise à jour du layout
+        fig_offensive.update_layout(
+            title='Performance offensive par match',
+            barmode='group',
+            xaxis_title='Match',
+            yaxis_title='Nombre',
+            showlegend=True,
+            xaxis=dict(tickangle=45)
+        )
+        
+        st.plotly_chart(fig_offensive, use_container_width=True)
+        
+        # Création du graphique défensif
+        fig_defensive = go.Figure()
+        
+        # Ajout des barres pour les statistiques défensives
+        fig_defensive.add_trace(go.Bar(
+            name='Tacles',
+            x=[m['Match'] for m in player_matches],
+            y=[m['Tkl'] for m in player_matches],
+            marker_color='#2ca02c',
+            text=[f"{m['Score']}" for m in player_matches],
+            hovertemplate="Match: %{x}<br>Score: %{text}<br>Tacles: %{y}<extra></extra>"
+        ))
+        
+        fig_defensive.add_trace(go.Bar(
+            name='Interceptions',
+            x=[m['Match'] for m in player_matches],
+            y=[m['Int'] for m in player_matches],
+            marker_color='#d62728',
+            text=[f"{m['Score']}" for m in player_matches],
+            hovertemplate="Match: %{x}<br>Score: %{text}<br>Interceptions: %{y}<extra></extra>"
+        ))
+        
+        fig_defensive.add_trace(go.Bar(
+            name='Blocages',
+            x=[m['Match'] for m in player_matches],
+            y=[m['Blocks'] for m in player_matches],
+            marker_color='#9467bd',
+            text=[f"{m['Score']}" for m in player_matches],
+            hovertemplate="Match: %{x}<br>Score: %{text}<br>Blocages: %{y}<extra></extra>"
+        ))
+        
+        fig_defensive.add_trace(go.Bar(
+            name='Dégagements',
+            x=[m['Match'] for m in player_matches],
+            y=[m['Clr'] for m in player_matches],
+            marker_color='#8c564b',
+            text=[f"{m['Score']}" for m in player_matches],
+            hovertemplate="Match: %{x}<br>Score: %{text}<br>Dégagements: %{y}<extra></extra>"
+        ))
+        
+        # Mise à jour du layout
+        fig_defensive.update_layout(
+            title='Performance défensive par match',
+            barmode='group',
+            xaxis_title='Match',
+            yaxis_title='Nombre',
+            showlegend=True,
+            xaxis=dict(tickangle=45)
+        )
+        
+        st.plotly_chart(fig_defensive, use_container_width=True)
+    else:
+        st.info(f"{selected_player} n'a pas encore joué de match en Ligue des Champions cette saison.")
+
+def analyze_ucl():
+    """Analyse des performances en Ligue des Champions"""
+    st.title("Analyse des performances en Ligue des Champions")
+    
+    # Sélection du type d'analyse
+    analysis_type = st.radio(
+        "Choisissez le type d'analyse",
+        ["Analyse match par match", "Progression dans la compétition", "Performances des joueurs clés", "Analyse détaillée par joueur", "Performance par match"]
+    )
+    
+    if analysis_type == "Analyse match par match":
+        analyze_ucl_matches()
+    elif analysis_type == "Progression dans la compétition":
+        analyze_ucl_progression()
+    elif analysis_type == "Performances des joueurs clés":
+        analyze_ucl_key_players()
+    elif analysis_type == "Analyse détaillée par joueur":
+        analyze_ucl_player_match()
+    elif analysis_type == "Performance par match":
+        analyze_ucl_match_performance()
 
 if __name__ == "__main__":
     render_home()
