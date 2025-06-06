@@ -24,6 +24,78 @@ except FileNotFoundError:
 # ----------------------------
 # FONCTIONS FBREF
 # ----------------------------
+def get_player_position(pos):
+    """Détermine la position principale d'un joueur"""
+    if pd.isna(pos):
+        return 'Unknown'
+    
+    pos = str(pos).strip()
+    
+    # Gardiens
+    if 'GK' in pos:
+        return 'GK'
+    
+    # Défenseurs
+    if 'DF' in pos or 'CB' in pos or 'LB' in pos or 'RB' in pos or 'WB' in pos:
+        return 'DF'
+    
+    # Milieux
+    if 'MF' in pos or 'DM' in pos or 'CM' in pos or 'AM' in pos:
+        return 'MF'
+    
+    # Attaquants
+    if 'FW' in pos or 'ST' in pos or 'LW' in pos or 'RW' in pos or 'CF' in pos:
+        return 'FW'
+    
+    return 'Unknown'
+
+def get_detailed_position(pos):
+    """Détermine la position détaillée d'un joueur"""
+    if pd.isna(pos):
+        return 'Unknown'
+    
+    pos = str(pos).strip()
+    
+    # Gardiens
+    if 'GK' in pos:
+        return 'Gardien'
+    
+    # Défenseurs
+    if 'CB' in pos:
+        return 'Défenseur Central'
+    if 'LB' in pos:
+        return 'Latéral Gauche'
+    if 'RB' in pos:
+        return 'Latéral Droit'
+    if 'WB' in pos:
+        return 'Arrière Latéral'
+    if 'DF' in pos:
+        return 'Défenseur'
+    
+    # Milieux
+    if 'DM' in pos:
+        return 'Milieu Défensif'
+    if 'CM' in pos:
+        return 'Milieu Central'
+    if 'AM' in pos:
+        return 'Milieu Offensif'
+    if 'MF' in pos:
+        return 'Milieu'
+    
+    # Attaquants
+    if 'ST' in pos:
+        return 'Attaquant'
+    if 'LW' in pos:
+        return 'Ailier Gauche'
+    if 'RW' in pos:
+        return 'Ailier Droit'
+    if 'CF' in pos:
+        return 'Attaquant de Pointe'
+    if 'FW' in pos:
+        return 'Attaquant'
+    
+    return 'Unknown'
+
 @st.cache_data
 def load_fbref_data():
     """Charge les données FBref du PSG pour la saison 2024-2025"""
@@ -39,6 +111,9 @@ def load_fbref_data():
         df['Player'] = df['Player'].str.strip()
         if 'Pos' in df.columns:
             df['Pos'] = df['Pos'].str.strip()
+            # Ajout des colonnes de position
+            df['Position'] = df['Pos'].apply(get_player_position)
+            df['Position_Detail'] = df['Pos'].apply(get_detailed_position)
     
     return {
         'standard': standard_stats,
@@ -229,20 +304,36 @@ def render_position_analysis():
     
     # Sélection de la position
     positions = ['FW', 'MF', 'DF', 'GK']
-    selected_position = st.selectbox("Sélectionnez une position", positions, key="position_analysis_select")
+    position_names = {
+        'FW': 'Attaquants',
+        'MF': 'Milieux',
+        'DF': 'Défenseurs',
+        'GK': 'Gardiens'
+    }
+    selected_position = st.selectbox("Sélectionnez une position", positions, key="position_analysis_select", format_func=lambda x: position_names[x])
     
     # Filtrage des joueurs par position
-    position_players = data['standard'][data['standard']['Pos'].str.contains(selected_position, na=False)]
+    position_players = data['standard'][data['standard']['Position'] == selected_position]
+    
+    # Affichage des positions détaillées
+    st.write("### Positions détaillées")
+    position_details = position_players['Position_Detail'].value_counts()
+    fig_details = px.pie(
+        values=position_details.values,
+        names=position_details.index,
+        title=f'Distribution des positions - {position_names[selected_position]}'
+    )
+    st.plotly_chart(fig_details, use_container_width=True)
     
     # Statistiques moyennes par position
-    st.subheader(f"Statistiques moyennes - {selected_position}")
+    st.subheader(f"Statistiques moyennes - {position_names[selected_position]}")
     display_position_metrics(position_players)
     
     # Graphique de dispersion
     fig = create_scatter_plot(
         position_players,
         'Gls', 'Ast', 'Gls', 'Min',
-        f'Buts vs Passes décisives - {selected_position}',
+        f'Buts vs Passes décisives - {position_names[selected_position]}',
         ['Gls', 'Ast', 'xG', 'xAG', 'Min']
     )
     
@@ -652,76 +743,179 @@ def analyze_goalkeeping_performance():
     
     st.header("Analyse des Gardiens")
     
-    goalkeepers = data['goalkeeping'].copy() # Utiliser une copie pour éviter SettingWithCopyWarning
+    goalkeepers = data['goalkeeping'].copy()
     
     if goalkeepers.empty:
         st.info("Aucune donnée de gardien disponible.")
         return
     
-    # Conversion des colonnes numériques (spécifiques aux gardiens)
-    # J'ai mis à jour la liste des colonnes en fonction du fichier CSV disponible
+    # Conversion des colonnes numériques
     numeric_gk_columns = [
-        'GA', 'GA90', 'SoTA', 'Saves', 'Save%', 'W', 'D', 'L', 'CS', 'CS%', 'PKatt', 'PKA', 'PKsv', 'PKm', 'Save%.1'
+        'GA', 'GA90', 'SoTA', 'Saves', 'Save%', 'W', 'D', 'L', 'CS', 'CS%', 
+        'PKatt', 'PKA', 'PKsv', 'PKm', 'Save%.1'
     ]
     
     for col in numeric_gk_columns:
         if col in goalkeepers.columns:
-            # Convertir en numérique et remplir les NaN avec 0
             goalkeepers[col] = pd.to_numeric(goalkeepers[col], errors='coerce').fillna(0)
-            
-    # Sélection du gardien
-    gk_names = goalkeepers['Player'].tolist()
-    selected_gk = st.selectbox("Sélectionnez un gardien", gk_names, key="goalkeeper_select")
     
+    # Vue d'ensemble des gardiens
+    st.subheader("Vue d'ensemble des gardiens")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        total_matches = goalkeepers['MP'].sum()
+        total_minutes = goalkeepers['Min'].sum()
+        st.metric("Matches joués", total_matches)
+        st.metric("Minutes jouées", total_minutes)
+    
+    with col2:
+        total_clean_sheets = goalkeepers['CS'].sum()
+        avg_clean_sheets = total_clean_sheets / len(goalkeepers)
+        st.metric("Clean Sheets totaux", total_clean_sheets)
+        st.metric("Clean Sheets moyens par gardien", f"{avg_clean_sheets:.1f}")
+    
+    with col3:
+        total_saves = goalkeepers['Saves'].sum()
+        avg_save_percentage = goalkeepers['Save%'].mean()
+        st.metric("Arrêts totaux", total_saves)
+        st.metric("Pourcentage d'arrêts moyen", f"{avg_save_percentage:.1f}%")
+    
+    # Graphique de comparaison des gardiens
+    st.subheader("Comparaison des gardiens")
+    
+    # Création d'un graphique radar pour comparer les gardiens
+    metrics = ['Save%', 'CS%', 'GA90', 'PKsv']
+    metric_names = ['% Arrêts', '% Clean Sheets', 'Buts encaissés p90', 'Arrêts Penalty']
+    
+    fig_radar = go.Figure()
+    
+    for _, gk in goalkeepers.iterrows():
+        values = []
+        for metric in metrics:
+            if metric in gk:
+                # Normalisation des valeurs
+                max_val = goalkeepers[metric].max()
+                min_val = goalkeepers[metric].min()
+                if max_val != min_val:
+                    # Inverser la normalisation pour GA90 (moins c'est mieux)
+                    if metric == 'GA90':
+                        normalized_value = (max_val - gk[metric]) / (max_val - min_val) * 100
+                    else:
+                        normalized_value = (gk[metric] - min_val) / (max_val - min_val) * 100
+                else:
+                    normalized_value = 50
+                values.append(normalized_value)
+        
+        fig_radar.add_trace(go.Scatterpolar(
+            r=values,
+            theta=metric_names,
+            fill='toself',
+            name=gk['Player']
+        ))
+    
+    fig_radar.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100]
+            )
+        ),
+        title='Comparaison des profils des gardiens',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_radar, use_container_width=True)
+    
+    # Analyse détaillée par gardien
+    st.subheader("Analyse détaillée par gardien")
+    
+    selected_gk = st.selectbox("Sélectionnez un gardien", goalkeepers['Player'].tolist(), key="goalkeeper_select")
     selected_gk_data = goalkeepers[goalkeepers['Player'] == selected_gk].iloc[0]
     
-    # Affichage des métriques clés
-    st.subheader(f"Statistiques pour {selected_gk}")
-    
+    # Métriques de performance
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.metric("Matches joués", selected_gk_data['MP'])
         st.metric("Minutes jouées", selected_gk_data['Min'])
         st.metric("Buts encaissés", selected_gk_data['GA'])
-        st.metric("Buts encaissés p90", round(selected_gk_data['GA90'], 2))
+        st.metric("Buts encaissés p90", f"{selected_gk_data['GA90']:.2f}")
     
     with col2:
         st.metric("Arrêts", selected_gk_data['Saves'])
-        st.metric("Pourcentage d\'arrêts", f"{round(selected_gk_data['Save%'], 1)}%")
+        st.metric("Pourcentage d'arrêts", f"{selected_gk_data['Save%']:.1f}%")
         st.metric("Clean Sheets", selected_gk_data['CS'])
-        st.metric("Pourcentage Clean Sheets", f"{round(selected_gk_data['CS%'], 1)}%")
-        
+        st.metric("Pourcentage Clean Sheets", f"{selected_gk_data['CS%']:.1f}%")
+    
     with col3:
         st.metric("Arrêts penalty", selected_gk_data['PKsv'])
         st.metric("Tentatives penalty subies", selected_gk_data['PKatt'])
         st.metric("Penalty manqués subis", selected_gk_data['PKm'])
-        st.metric("Pourcentage d\'arrêts penalty", f"{round(selected_gk_data['Save%.1'], 1)}%")
-        
-    # Graphique de comparaison des arrêts
-    st.subheader("Arrêts vs Buts encaissés p90")
+        st.metric("Pourcentage d'arrêts penalty", f"{selected_gk_data['Save%.1']:.1f}%")
     
-    fig_gk = go.Figure()
-    fig_gk.add_trace(go.Bar(
-        name='Arrêts',
-        x=[selected_gk],
-        y=[selected_gk_data['Saves']],
-        marker_color='#2ca02c'
-    ))
-    fig_gk.add_trace(go.Bar(
-        name='Buts encaissés p90',
-        x=[selected_gk],
-        y=[selected_gk_data['GA90']],
-        marker_color='#d62728'
+    # Graphique de performance
+    st.subheader("Profil de performance")
+    
+    performance_metrics = {
+        'Arrêts': selected_gk_data['Saves'],
+        'Clean Sheets': selected_gk_data['CS'],
+        'Buts encaissés p90': selected_gk_data['GA90'],
+        'Arrêts Penalty': selected_gk_data['PKsv']
+    }
+    
+    fig_performance = go.Figure()
+    fig_performance.add_trace(go.Bar(
+        x=list(performance_metrics.keys()),
+        y=list(performance_metrics.values()),
+        marker_color='#1f77b4'
     ))
     
-    fig_gk.update_layout(
-        title=f'Comparaison Arrêts vs Buts encaissés p90 - {selected_gk}',
+    fig_performance.update_layout(
+        title=f'Profil de performance - {selected_gk}',
+        xaxis_title='Métriques',
         yaxis_title='Valeur',
-        showlegend=True
+        showlegend=False
     )
     
-    st.plotly_chart(fig_gk, use_container_width=True)
+    st.plotly_chart(fig_performance, use_container_width=True)
+    
+    # Analyse des performances par match
+    st.subheader("Performances par match")
+    
+    # Création d'un graphique de dispersion pour les performances par match
+    fig_scatter = go.Figure()
+    
+    fig_scatter.add_trace(go.Scatter(
+        x=goalkeepers['GA90'],
+        y=goalkeepers['Save%'],
+        mode='markers+text',
+        text=goalkeepers['Player'],
+        textposition="top center",
+        marker=dict(
+            size=goalkeepers['MP'],
+            color=goalkeepers['CS%'],
+            colorscale='RdYlGn',
+            showscale=True,
+            colorbar=dict(title='% Clean Sheets')
+        ),
+        hovertemplate=(
+            "Gardien: %{text}<br>"
+            "Buts encaissés p90: %{x:.2f}<br>"
+            "Pourcentage d'arrêts: %{y:.1f}%<br>"
+            "Matches joués: %{marker.size}<extra></extra>"
+        )
+    ))
+    
+    fig_scatter.update_layout(
+        title='Performances par match',
+        xaxis_title='Buts encaissés p90',
+        yaxis_title='Pourcentage d\'arrêts',
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig_scatter, use_container_width=True)
 
 def analyze_match_performance():
     """Analyse des performances match par match"""
@@ -770,7 +964,7 @@ def analyze_match_performance():
         'Passes décisives': player_data['Ast'],
         'xG': player_data['xG'],
         'xAG': player_data['xAG'],
-        'Tirs cadrés': player_data['SoT'],
+        'Tirs cadrés': player_shooting['SoT'],
         'Passes progressives': player_passing['PrgP']
     }
     
@@ -808,28 +1002,28 @@ def analyze_match_performance():
         'Moyenne Équipe': [team_avg[m] for m in metrics.keys()]
     })
     
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
+    fig_comparison = go.Figure()
+    fig_comparison.add_trace(go.Bar(
         name='Joueur',
         x=comparison_data['Métrique'],
         y=comparison_data['Joueur'],
         marker_color='#1f77b4'
     ))
     
-    fig.add_trace(go.Bar(
+    fig_comparison.add_trace(go.Bar(
         name='Moyenne Équipe',
         x=comparison_data['Métrique'],
         y=comparison_data['Moyenne Équipe'],
         marker_color='#ff7f0e'
     ))
     
-    fig.update_layout(
+    fig_comparison.update_layout(
         title='Comparaison avec la moyenne de l\'équipe',
         barmode='group',
         showlegend=True
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_comparison, use_container_width=True)
 
 @st.cache_data
 def load_ucl_data():
