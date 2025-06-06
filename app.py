@@ -6,7 +6,7 @@ import plotly.express as px
 import base64
 import os
 from streamlit_card import card
-
+ 
 # Configuration de la page
 st.set_page_config(
     page_title="PSG Data Center 2024-2025",
@@ -27,12 +27,12 @@ except FileNotFoundError:
 @st.cache_data
 def load_fbref_data():
     """Charge les données FBref du PSG pour la saison 2024-2025"""
-    standard_stats = pd.read_csv('PSG Standard Stats.csv')
-    shooting_stats = pd.read_csv('PSG Shooting.csv')
-    passing_stats = pd.read_csv('PSG Passing.csv')
-    possession_stats = pd.read_csv('PSG Possession.csv')
-    playing_time = pd.read_csv('PSG Playing Time.csv')
-    goalkeeping_stats = pd.read_csv('PSG Goalkeeping.csv')
+    standard_stats = pd.read_csv('data/PSG Standard Stats.csv')
+    shooting_stats = pd.read_csv('data/PSG Shooting.csv')
+    passing_stats = pd.read_csv('data/PSG Passing.csv')
+    possession_stats = pd.read_csv('data/PSG Possession.csv')
+    playing_time = pd.read_csv('data/PSG Playing Time.csv')
+    goalkeeping_stats = pd.read_csv('data/PSG Goalkeeping.csv')
     
     # Nettoyage des données
     for df in [standard_stats, shooting_stats, passing_stats, possession_stats, playing_time, goalkeeping_stats]:
@@ -354,7 +354,7 @@ def analyze_tactical_performance():
             title=f"Profil de {player['Player']}",
             showlegend=False
         )
-        
+
         st.plotly_chart(fig, use_container_width=True)
 
 def analyze_team_strengths():
@@ -770,7 +770,7 @@ def analyze_match_performance():
         'Passes décisives': player_data['Ast'],
         'xG': player_data['xG'],
         'xAG': player_data['xAG'],
-        'Tirs cadrés': player_shooting['SoT'],
+        'Tirs cadrés': player_data['SoT'],
         'Passes progressives': player_passing['PrgP']
     }
     
@@ -831,6 +831,575 @@ def analyze_match_performance():
     
     st.plotly_chart(fig, use_container_width=True)
 
+@st.cache_data
+def load_ucl_data():
+    """Charge les données des matchs de Ligue des Champions"""
+    # Définition de l'ordre chronologique des matchs, leurs phases et leurs scores
+    match_order = {
+        # Phase de Ligue
+        'PSG - Girona': {'phase': 'Phase de Ligue', 'ordre': 1, 'score': '1-0'},
+        'Arsenal - PSG': {'phase': 'Phase de Ligue', 'ordre': 2, 'score': '2-0'},
+        'PSG -PSV': {'phase': 'Phase de Ligue', 'ordre': 3, 'score': '1-1'},
+        'PSG - Atletico': {'phase': 'Phase de Ligue', 'ordre': 4, 'score': '1-2'},
+        'Bayern - PSG': {'phase': 'Phase de Ligue', 'ordre': 5, 'score': '1-0'},
+        'Salzburg - PSG': {'phase': 'Phase de Ligue', 'ordre': 6, 'score': '0-3'},
+        'PSG - Manchester City': {'phase': 'Phase de Ligue', 'ordre': 7, 'score': '4-2'},
+        'Stuttgart - PSG': {'phase': 'Phase de Ligue', 'ordre': 8, 'score': '1-4'},
+        # Barrages
+        'Brest - PSG': {'phase': 'Barrages', 'ordre': 9, 'score': '0-3'},
+        'PSG - Brest': {'phase': 'Barrages', 'ordre': 10, 'score': '7-0'},
+        # 1/8 de finale
+        'PSG - Liverpool': {'phase': '1/8 de finale', 'ordre': 11, 'score': '0-1'},
+        'Liverpool - PSG': {'phase': '1/8 de finale', 'ordre': 12, 'score': '1-0 (4-1 pen)'},
+        # 1/4 de finale
+        'PSG - Aston Villa': {'phase': '1/4 de finale', 'ordre': 13, 'score': '3-1'},
+        'Aston Villa - PSG': {'phase': '1/4 de finale', 'ordre': 14, 'score': '3-2'},
+        # 1/2 finale
+        'Arsenal - PSG 2': {'phase': '1/2 finale', 'ordre': 15, 'score': '0-1'},
+        'PSG - Arsenal ': {'phase': '1/2 finale', 'ordre': 16, 'score': '2-1'},
+        # Finale
+        'PSG - Inter': {'phase': 'Finale', 'ordre': 17, 'score': '5-0'}
+    }
+    
+    ucl_data = {}
+    
+    for file in os.listdir('data/PSG UCL Games'):
+        if file.endswith('.csv'):
+            match_name = file.replace('PSG UCL Games - ', '').replace('.csv', '')
+            if match_name in match_order:
+                df = pd.read_csv(f'data/PSG UCL Games/{file}', skiprows=1)
+                df = df.rename(columns={
+                    'Performance': 'Player',
+                    'Gls': 'Gls',
+                    'Ast': 'Ast',
+                    'Sh': 'Sh',
+                    'SoT': 'SoT',
+                    'xG': 'xG',
+                    'xAG': 'xAG',
+                    'SCA': 'SCA',
+                    'GCA': 'GCA',
+                    'PrgP': 'PrgP',
+                    'PrgC': 'PrgC',
+                    'Min': 'Min'
+                })
+                df['Phase'] = match_order[match_name]['phase']
+                df['Ordre'] = match_order[match_name]['ordre']
+                df['Score'] = match_order[match_name]['score']
+                ucl_data[match_name] = df
+    
+    return ucl_data
+
+def analyze_ucl_progression():
+    """Analyse de la progression dans la Ligue des Champions"""
+    data = load_ucl_data()
+    
+    st.subheader("Progression dans la compétition")
+    
+    # Calcul des statistiques cumulées
+    cumulative_stats = {
+        'Gls': [],
+        'Ast': [],
+        'xG': [],
+        'xAG': [],
+        'Sh': [],
+        'SoT': [],
+        'SCA': [],
+        'GCA': []
+    }
+    
+    match_names = []
+    phases = []
+    scores = []
+    
+    for match_name, match_data in sorted(data.items(), key=lambda x: x[1]['Ordre'].iloc[0]):
+        match_names.append(match_name)
+        phases.append(match_data['Phase'].iloc[0])
+        scores.append(match_data['Score'].iloc[0])
+        for stat in cumulative_stats.keys():
+            cumulative_stats[stat].append(match_data[stat].sum())
+    
+    # Création d'un DataFrame pour les statistiques cumulées
+    progression_df = pd.DataFrame({
+        'Match': match_names,
+        'Phase': phases,
+        'Score': scores,
+        **cumulative_stats
+    })
+    
+    # Graphique de progression des buts et xG
+    fig_goals = go.Figure()
+    fig_goals.add_trace(go.Scatter(
+        name='Buts',
+        x=progression_df['Match'],
+        y=progression_df['Gls'],
+        mode='lines+markers',
+        marker=dict(color='#1f77b4'),
+        text=progression_df['Score'],
+        hovertemplate="Match: %{x}<br>Score: %{text}<br>Buts: %{y}<extra></extra>"
+    ))
+    fig_goals.add_trace(go.Scatter(
+        name='xG',
+        x=progression_df['Match'],
+        y=progression_df['xG'],
+        mode='lines+markers',
+        marker=dict(color='#ff7f0e'),
+        text=progression_df['Score'],
+        hovertemplate="Match: %{x}<br>Score: %{text}<br>xG: %{y}<extra></extra>"
+    ))
+    
+    fig_goals.update_layout(
+        title='Progression des buts et xG',
+        xaxis_title='Match',
+        yaxis_title='Valeur',
+        showlegend=True,
+        xaxis=dict(tickangle=45)
+    )
+    
+    st.plotly_chart(fig_goals, use_container_width=True)
+    
+    # Graphique de progression des actions de création
+    fig_creation = go.Figure()
+    fig_creation.add_trace(go.Scatter(
+        name='Actions de création',
+        x=progression_df['Match'],
+        y=progression_df['SCA'],
+        mode='lines+markers',
+        marker=dict(color='#2ca02c'),
+        text=progression_df['Score'],
+        hovertemplate="Match: %{x}<br>Score: %{text}<br>SCA: %{y}<extra></extra>"
+    ))
+    fig_creation.add_trace(go.Scatter(
+        name='Actions de création de buts',
+        x=progression_df['Match'],
+        y=progression_df['GCA'],
+        mode='lines+markers',
+        marker=dict(color='#d62728'),
+        text=progression_df['Score'],
+        hovertemplate="Match: %{x}<br>Score: %{text}<br>GCA: %{y}<extra></extra>"
+    ))
+    
+    fig_creation.update_layout(
+        title='Progression des actions de création',
+        xaxis_title='Match',
+        yaxis_title='Valeur',
+        showlegend=True,
+        xaxis=dict(tickangle=45)
+    )
+    
+    st.plotly_chart(fig_creation, use_container_width=True)
+    
+    # Analyse des performances par phase
+    st.subheader("Performances par phase")
+    
+    phase_stats = progression_df.groupby('Phase').agg({
+        'Gls': 'sum',
+        'Ast': 'sum',
+        'xG': 'sum',
+        'Sh': 'sum',
+        'SCA': 'sum',
+        'GCA': 'sum'
+    }).reset_index()
+    
+    fig_phase = go.Figure()
+    fig_phase.add_trace(go.Bar(
+        name='Buts',
+        x=phase_stats['Phase'],
+        y=phase_stats['Gls'],
+        marker_color='#1f77b4'
+    ))
+    fig_phase.add_trace(go.Bar(
+        name='Passes décisives',
+        x=phase_stats['Phase'],
+        y=phase_stats['Ast'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_phase.update_layout(
+        title='Buts et Passes décisives par phase',
+        barmode='group',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_phase, use_container_width=True)
+    
+
+
+def analyze_ucl_key_players():
+    """Analyse des performances clés des joueurs en Ligue des Champions"""
+    data = load_ucl_data()
+    
+    st.subheader("Performances clés des joueurs")
+    
+    # Calcul des statistiques cumulées par joueur
+    player_stats = {}
+    
+    for match_data in data.values():
+        for _, player in match_data.iterrows():
+            player_name = player['Player']
+            if player_name not in player_stats:
+                player_stats[player_name] = {
+                    'Gls': 0, 'Ast': 0, 'xG': 0, 'xAG': 0,
+                    'Sh': 0, 'SoT': 0, 'SCA': 0, 'GCA': 0,
+                    'Min': 0, 'Matches': 0
+                }
+            
+            player_stats[player_name]['Gls'] += player['Gls']
+            player_stats[player_name]['Ast'] += player['Ast']
+            player_stats[player_name]['xG'] += player['xG']
+            player_stats[player_name]['xAG'] += player['xAG']
+            player_stats[player_name]['Sh'] += player['Sh']
+            player_stats[player_name]['SoT'] += player['SoT']
+            player_stats[player_name]['SCA'] += player['SCA']
+            player_stats[player_name]['GCA'] += player['GCA']
+            player_stats[player_name]['Min'] += player['Min']
+            player_stats[player_name]['Matches'] += 1
+    
+    # Conversion en DataFrame
+    key_players_df = pd.DataFrame.from_dict(player_stats, orient='index')
+    key_players_df = key_players_df.reset_index().rename(columns={'index': 'Player'})
+    
+    # Calcul des statistiques par 90 minutes
+    key_players_df['Gls/90'] = (key_players_df['Gls'] * 90) / key_players_df['Min']
+    key_players_df['Ast/90'] = (key_players_df['Ast'] * 90) / key_players_df['Min']
+    key_players_df['xG/90'] = (key_players_df['xG'] * 90) / key_players_df['Min']
+    key_players_df['xAG/90'] = (key_players_df['xAG'] * 90) / key_players_df['Min']
+    key_players_df['SCA/90'] = (key_players_df['SCA'] * 90) / key_players_df['Min']
+    key_players_df['GCA/90'] = (key_players_df['GCA'] * 90) / key_players_df['Min']
+    
+    # Sélection des joueurs avec au moins 90 minutes jouées
+    key_players_df = key_players_df[key_players_df['Min'] >= 90]
+    
+    # Top 5 buteurs
+    st.write("### Top 5 Buteurs")
+    top_scorers = key_players_df.nlargest(5, 'Gls')[['Player', 'Gls', 'Gls/90', 'xG', 'xG/90']]
+    
+    fig_scorers = go.Figure()
+    fig_scorers.add_trace(go.Bar(
+        name='Buts',
+        x=top_scorers['Player'],
+        y=top_scorers['Gls'],
+        marker_color='#1f77b4'
+    ))
+    fig_scorers.add_trace(go.Bar(
+        name='xG',
+        x=top_scorers['Player'],
+        y=top_scorers['xG'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_scorers.update_layout(
+        title='Top 5 Buteurs',
+        barmode='group',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_scorers, use_container_width=True)
+    
+    # Top 5 passeurs
+    st.write("### Top 5 Passeurs")
+    top_assists = key_players_df.nlargest(5, 'Ast')[['Player', 'Ast', 'Ast/90', 'xAG', 'xAG/90']]
+    
+    fig_assists = go.Figure()
+    fig_assists.add_trace(go.Bar(
+        name='Passes décisives',
+        x=top_assists['Player'],
+        y=top_assists['Ast'],
+        marker_color='#2ca02c'
+    ))
+    fig_assists.add_trace(go.Bar(
+        name='xAG',
+        x=top_assists['Player'],
+        y=top_assists['xAG'],
+        marker_color='#d62728'
+    ))
+    
+    fig_assists.update_layout(
+        title='Top 5 Passeurs',
+        barmode='group',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_assists, use_container_width=True)
+    
+    # Top 5 créateurs de chances
+    st.write("### Top 5 Créateurs de Chances")
+    top_creators = key_players_df.nlargest(5, 'SCA')[['Player', 'SCA', 'GCA', 'SCA/90', 'GCA/90']]
+    
+    fig_creators = go.Figure()
+    fig_creators.add_trace(go.Bar(
+        name='Actions de création',
+        x=top_creators['Player'],
+        y=top_creators['SCA'],
+        marker_color='#9467bd'
+    ))
+    fig_creators.add_trace(go.Bar(
+        name='Actions de création de buts',
+        x=top_creators['Player'],
+        y=top_creators['GCA'],
+        marker_color='#8c564b'
+    ))
+    
+    fig_creators.update_layout(
+        title='Top 5 Créateurs de Chances',
+        barmode='group',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_creators, use_container_width=True)
+
+def analyze_ucl_player_match():
+    """Analyse détaillée des performances par joueur pour chaque match de Ligue des Champions"""
+    data = load_ucl_data()
+    
+    st.subheader("Analyse détaillée par joueur")
+    
+    # Sélection du match
+    match_names = sorted(data.keys(), key=lambda x: data[x]['Ordre'].iloc[0])
+    selected_match = st.selectbox("Sélectionnez un match", match_names, key="ucl_player_match_select")
+    
+    match_data = data[selected_match]
+    
+    # Affichage du score et de la phase
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Score", match_data['Score'].iloc[0])
+    with col2:
+        st.metric("Phase", match_data['Phase'].iloc[0])
+    
+    # Sélection du joueur
+    player_names = match_data['Player'].tolist()
+    selected_player = st.selectbox("Sélectionnez un joueur", player_names, key="ucl_player_select")
+    
+    player_data = match_data[match_data['Player'] == selected_player].iloc[0]
+    
+    # Métriques détaillées
+    st.write("### Métriques détaillées")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Minutes jouées", player_data['Min'])
+        st.metric("Buts", player_data['Gls'])
+        st.metric("xG", f"{player_data['xG']:.2f}")
+        st.metric("Tirs", player_data['Sh'])
+        st.metric("Tirs cadrés", player_data['SoT'])
+    
+    with col2:
+        st.metric("Passes décisives", player_data['Ast'])
+        st.metric("xAG", f"{player_data['xAG']:.2f}")
+        st.metric("Actions de création", player_data['SCA'])
+        st.metric("Actions de création de buts", player_data['GCA'])
+    
+    with col3:
+        st.metric("Passes progressives", player_data['PrgP'])
+        st.metric("Progression portée", player_data['PrgC'])
+    
+    # Graphique radar des performances
+    st.write("### Profil de performance")
+    
+    # Utilisation des noms de colonnes exacts
+    metrics = {
+        'Gls': player_data['Gls'],
+        'Ast': player_data['Ast'],
+        'xG': player_data['xG'],
+        'xAG': player_data['xAG'],
+        'SoT': player_data['SoT'],
+        'SCA': player_data['SCA'],
+        'GCA': player_data['GCA'],
+        'PrgP': player_data['PrgP']
+    }
+    
+    # Noms d'affichage pour le graphique
+    display_names = {
+        'Gls': 'Buts',
+        'Ast': 'Passes décisives',
+        'xG': 'xG',
+        'xAG': 'xAG',
+        'SoT': 'Tirs cadrés',
+        'SCA': 'Actions de création',
+        'GCA': 'Actions de création de buts',
+        'PrgP': 'Passes progressives'
+    }
+    
+    # Normalisation des valeurs pour le graphique radar
+    max_values = {
+        'Gls': 3,
+        'Ast': 2,
+        'xG': 2,
+        'xAG': 2,
+        'SoT': 5,
+        'SCA': 8,
+        'GCA': 3,
+        'PrgP': 15
+    }
+    
+    normalized_metrics = {display_names[k]: (v / max_values[k]) * 100 for k, v in metrics.items()}
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=list(normalized_metrics.values()),
+        theta=list(normalized_metrics.keys()),
+        fill='toself',
+        name=selected_player
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100]
+            )
+        ),
+        title=f'Profil de performance - {selected_player} vs {selected_match} ({match_data["Score"].iloc[0]})',
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Comparaison avec la moyenne de l'équipe pour ce match
+    st.write("### Comparaison avec la moyenne de l'équipe")
+    
+    team_avg = match_data[metrics.keys()].mean()
+    
+    comparison_data = pd.DataFrame({
+        'Métrique': [display_names[k] for k in metrics.keys()],
+        'Joueur': list(metrics.values()),
+        'Moyenne Équipe': team_avg.values
+    })
+    
+    fig_comparison = go.Figure()
+    fig_comparison.add_trace(go.Bar(
+        name='Joueur',
+        x=comparison_data['Métrique'],
+        y=comparison_data['Joueur'],
+        marker_color='#1f77b4'
+    ))
+    
+    fig_comparison.add_trace(go.Bar(
+        name='Moyenne Équipe',
+        x=comparison_data['Métrique'],
+        y=comparison_data['Moyenne Équipe'],
+        marker_color='#ff7f0e'
+    ))
+    
+    fig_comparison.update_layout(
+        title=f'Comparaison avec la moyenne de l\'équipe - {selected_match} ({match_data["Score"].iloc[0]})',
+        barmode='group',
+        showlegend=True
+    )
+    
+    st.plotly_chart(fig_comparison, use_container_width=True)
+
+def analyze_ucl_performance():
+    """Analyse des performances en Ligue des Champions"""
+    data = load_ucl_data()
+    
+    st.header("Analyse Ligue des Champions")
+    
+    analysis_type = st.radio(
+        "Choisissez une analyse :",
+        ("Analyse Match par Match", "Progression dans la compétition", "Performances clés des joueurs", "Analyse détaillée par joueur"),
+        key="ucl_analysis_radio"
+    )
+    
+    if analysis_type == "Analyse Match par Match":
+        # Sélection du match
+        match_names = sorted(data.keys(), key=lambda x: data[x]['Ordre'].iloc[0])
+        selected_match = st.selectbox("Sélectionnez un match", match_names, key="ucl_match_select")
+        
+        match_data = data[selected_match]
+        
+        # Affichage du score et de la phase
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Score", match_data['Score'].iloc[0])
+        with col2:
+            st.metric("Phase", match_data['Phase'].iloc[0])
+        
+        # Statistiques du match
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            total_goals = match_data['Gls'].sum()
+            total_xg = match_data['xG'].sum()
+            st.metric("Buts marqués", total_goals)
+            st.metric("xG total", f"{total_xg:.2f}")
+        
+        with col2:
+            total_assists = match_data['Ast'].sum()
+            total_xag = match_data['xAG'].sum()
+            st.metric("Passes décisives", total_assists)
+            st.metric("xAG total", f"{total_xag:.2f}")
+        
+        with col3:
+            total_shots = match_data['Sh'].sum()
+            shots_on_target = match_data['SoT'].sum()
+            st.metric("Tirs totaux", total_shots)
+            st.metric("Tirs cadrés", shots_on_target)
+        
+        # Graphique des performances individuelles
+        st.subheader("Performances individuelles")
+        
+        performance_data = match_data[['Player', 'Gls', 'Ast', 'xG', 'xAG', 'Sh', 'SoT']]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            name='Buts',
+            x=performance_data['Player'],
+            y=performance_data['Gls'],
+            marker_color='#1f77b4'
+        ))
+        fig.add_trace(go.Bar(
+            name='Passes décisives',
+            x=performance_data['Player'],
+            y=performance_data['Ast'],
+            marker_color='#ff7f0e'
+        ))
+        
+        fig.update_layout(
+            title=f'Buts et Passes décisives par joueur - {selected_match} ({match_data["Score"].iloc[0]})',
+            barmode='group',
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Analyse des actions de création
+        st.subheader("Actions de création")
+        
+        creation_data = match_data[['Player', 'SCA', 'GCA', 'PrgP', 'PrgC']]
+        
+        fig_creation = go.Figure()
+        fig_creation.add_trace(go.Bar(
+            name='Actions de création',
+            x=creation_data['Player'],
+            y=creation_data['SCA'],
+            marker_color='#2ca02c'
+        ))
+        fig_creation.add_trace(go.Bar(
+            name='Actions de création de buts',
+            x=creation_data['Player'],
+            y=creation_data['GCA'],
+            marker_color='#d62728'
+        ))
+        
+        fig_creation.update_layout(
+            title=f'Actions de création par joueur - {selected_match} ({match_data["Score"].iloc[0]})',
+            barmode='group',
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig_creation, use_container_width=True)
+    
+    elif analysis_type == "Progression dans la compétition":
+        analyze_ucl_progression()
+    
+    elif analysis_type == "Performances clés des joueurs":
+        analyze_ucl_key_players()
+    
+    else:  # Analyse détaillée par joueur
+        analyze_ucl_player_match()
+
 def render_home():
     # Enveloppement du logo et du titre dans un conteneur centré via HTML/CSS
     centered_header = """
@@ -842,10 +1411,11 @@ def render_home():
     st.markdown(centered_header, unsafe_allow_html=True)
 
     # Onglets principaux regroupés
-    tab_overview, tab_individual, tab_collective, tab_goalkeeping = st.tabs([
+    tab_overview, tab_individual, tab_collective, tab_ucl, tab_goalkeeping = st.tabs([
         "Vue d'ensemble",
         "Analyse individuelle",
         "Analyse collective",
+        "🏆 Ligue des Champions",
         "🧤 Analyse Gardiens"
     ])
 
@@ -887,6 +1457,9 @@ def render_home():
             analyze_tactical_patterns()
         elif analysis_type == "Analyse Défensive":
             analyze_defensive_metrics()
+
+    with tab_ucl:
+        analyze_ucl_performance()
 
     with tab_goalkeeping:
         analyze_goalkeeping_performance()
