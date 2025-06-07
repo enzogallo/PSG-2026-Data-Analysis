@@ -240,7 +240,7 @@ def render_overview():
         st.metric("Matches joués ", int(total_matches))
     
     # Top 5 buteurs 
-    st.subheader("Top 5 Buteurs ")
+    st.markdown("""<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: \"Poppins\", sans-serif;'>Top 5 Buteurs </h2>""", unsafe_allow_html=True)
     top_scorers = field_player_data.nlargest(5, 'Gls')[['Player', 'Gls', 'xG', 'Gls/90']]
     fig_scorers = px.bar(top_scorers, x='Player', y='Gls',
                         title='',
@@ -249,7 +249,7 @@ def render_overview():
     st.plotly_chart(fig_scorers, use_container_width=True)
     
     # Top 5 passeurs 
-    st.subheader("Top 5 Passeurs ")
+    st.markdown("""<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: \"Poppins\", sans-serif;'>Top 5 Passeurs </h2>""", unsafe_allow_html=True)
     top_assists = field_player_data.nlargest(5, 'Ast')[['Player', 'Ast', 'xAG', 'Ast/90']]
     fig_assists = px.bar(top_assists, x='Player', y='Ast',
                         title='',
@@ -324,7 +324,7 @@ def render_player_analysis():
             with col1:
                 st.image(photo_path, width=200, use_container_width=True)
             with col2:
-                st.subheader(f"Analyse de {selected_player}")
+                st.markdown(f'''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Analyse de {selected_player}</h2>''', unsafe_allow_html=True)
                 
                 # Informations de base
                 player_data = field_players_standard[field_players_standard['Player'] == selected_player]
@@ -375,7 +375,7 @@ def render_player_analysis():
         st.subheader(f"Analyse de {selected_player}")
 
     # Graphiques de performance
-    st.subheader("Performance offensive")
+    st.markdown('''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Performance offensive</h2>''', unsafe_allow_html=True)
     fig_offensive = go.Figure()
 
     fig_offensive.add_trace(go.Bar(
@@ -428,7 +428,7 @@ def render_position_analysis():
         return
     
     # Statistiques moyennes par position
-    st.subheader(f"Statistiques moyennes - {position_names[selected_position]}")
+    st.markdown(f'''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Statistiques moyennes - {position_names[selected_position]}</h2>''', unsafe_allow_html=True)
     display_position_metrics(position_players)
     
     # Graphique de dispersion
@@ -1816,7 +1816,7 @@ def render_home():
     centered_header = """
     <div style='text-align: center; background: none; padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0;'>
         <img src='https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg' width='100' style='display: block; margin: 0 auto;'>
-        <h1 style='text-align: center; color: white; font-size: 2.2em;'>PSG Data Center - Saison 2024-2025</h1>
+        <h1 style='text-align: center; color: white; font-size: 2.2em; font-family: "Poppins", sans-serif; font-weight: 700;'>PSG Data Center - Saison 2024-2025</h1>
     </div>
     """
     st.markdown(centered_header, unsafe_allow_html=True)
