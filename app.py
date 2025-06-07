@@ -547,7 +547,7 @@ def render_comparisons():
                 photo_path = get_player_photo(player)
                 if photo_path:
                     try:
-                        st.image(photo_path, width=100, use_container_width='auto')
+                        st.image(photo_path, width=300, use_container_width='auto')
                     except Exception as e:
                         st.error(f"Erreur lors de l'affichage de la photo de {player}: {str(e)}")
                 st.subheader(player)
@@ -701,6 +701,44 @@ def analyze_team_strengths():
     
     st.plotly_chart(fig_strengths, use_container_width=True)
     
+    # Analyse des faiblesses
+    st.subheader("Faiblesses de l'Équipe")
+    
+    # Création d'un graphique en barres pour les statistiques clés de faiblesse
+    # Récupération des données nécessaires
+    shooting_data = data['shooting']
+    passing_data = data['passing']
+    possession_data = data['possession']
+    standard_data = data['standard']
+    
+    # Calcul des métriques de faiblesse (moyennes ou sommes selon la métrique)
+    weakness_stats = {
+        '% Tirs cadrés (moyen)': shooting_data['SoT%'].mean() if 'SoT%' in shooting_data.columns else 0,
+        '% Passes réussies (moyen)': passing_data['Cmp%'].mean() if 'Cmp%' in passing_data.columns else 0,
+        'Ballons perdus (total)': possession_data['Dis'].sum() if 'Dis' in possession_data.columns else 0,
+        'Cartons jaunes (total)': standard_data['CrdY'].sum() if 'CrdY' in standard_data.columns else 0,
+        'Cartons rouges (total)': standard_data['CrdR'].sum() if 'CrdR' in standard_data.columns else 0
+    }
+    
+    # Convertir les pourcentages en valeurs pour une meilleure visualisation si nécessaire, ou adapter le graphique
+    # Pour le graphique à barres, afficher les valeurs brutes est acceptable avec des étiquettes claires
+    
+    fig_weaknesses = go.Figure(data=[
+        go.Bar(
+            x=list(weakness_stats.keys()),
+            y=list(weakness_stats.values()),
+            marker_color=['#d62728', '#ff7f0e', '#1f77b4', '#9467bd', '#8c564b'] # Couleurs pour les faiblesses
+        )
+    ])
+    
+    fig_weaknesses.update_layout(
+        title="Statistiques des Faiblesses",
+        xaxis_title="Métriques",
+        yaxis_title="Quantité (Total ou Moyenne)"
+    )
+    
+    st.plotly_chart(fig_weaknesses, use_container_width=True)
+    
     # Analyse des profils de position
     st.subheader("Analyse par Position")
     
@@ -750,7 +788,7 @@ def analyze_player_roles():
     player_shooting_data = field_players_shooting[field_players_shooting['Player'] == selected_player]
 
     # --- Affichage de la photo et du graphique radar côte à côte ---
-    col_photo, col_radar = st.columns([1, 2]) # Ajuster les proportions si nécessaire
+    col_photo, space, col_radar = st.columns([1, 1, 2]) # Ajuster les proportions si nécessaire
 
     with col_photo:
         # Affichage de la photo du joueur
