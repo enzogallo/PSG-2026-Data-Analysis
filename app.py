@@ -344,8 +344,8 @@ def render_player_analysis():
                 with col_metrics1:
                     st.metric("Matches joués", player_data['MP'])
                     st.metric("Minutes jouées", player_data['Min'])
-                    st.metric("Buts", player_data['Gls'])
-                    st.metric("Passes décisives", player_data['Ast'])
+                    st.metric("Buts", int(player_data['Gls']))
+                    st.metric("Passes décisives", int(player_data['Ast']))
 
                 with col_metrics2:
                     st.metric("xG", round(player_data['xG'], 2))
@@ -727,7 +727,7 @@ def analyze_player_roles():
             st.plotly_chart(fig, use_container_width=True)
 
     # --- Affichage des métriques détaillées en dessous ---
-    st.write("### Métriques détaillées")
+    st.markdown('''<h3 style='color: white; font-size: 1.4rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Métriques détaillées</h3>''', unsafe_allow_html=True)
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -1193,8 +1193,8 @@ def analyze_match_performance():
                 with col_metrics1:
                     st.metric("Matches joués", player_data['MP'].iloc[0])
                     st.metric("Minutes jouées", player_data['Min'].iloc[0])
-                    st.metric("Buts", player_data['Gls'].iloc[0])
-                    st.metric("Passes décisives", player_data['Ast'].iloc[0])
+                    st.metric("Buts", int(player_data['Gls'].iloc[0]))
+                    st.metric("Passes décisives", int(player_data['Ast'].iloc[0]))
                 
                 with col_metrics2:
                     st.metric("xG", round(player_data['xG'].iloc[0], 2))
@@ -1587,19 +1587,19 @@ def analyze_ucl_player_match():
         st.subheader(selected_player)
 
     with col_metrics_ucl:
-        st.write("### Métriques détaillées")
+        st.markdown('''<h3 style='color: white; font-size: 1.4rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Métriques détaillées</h3>''', unsafe_allow_html=True)
         
         col1_stats, col2_stats, col3_stats = st.columns(3)
 
         with col1_stats:
             st.metric("Minutes jouées", player_data['Min'])
-            st.metric("Buts", player_data['Gls'])
+            st.metric("Buts", int(player_data['Gls']))
             st.metric("xG", f"{player_data['xG']:.2f}")
             st.metric("Tirs", player_data['Sh'])
             st.metric("Tirs cadrés", player_data['SoT'])
 
         with col2_stats:
-            st.metric("Passes décisives", player_data['Ast'])
+            st.metric("Passes décisives", int(player_data['Ast']))
             st.metric("xAG", f"{player_data['xAG']:.2f}")
             st.metric("Actions de création", player_data['SCA'])
             st.metric("Actions de création de buts", player_data['GCA'])
@@ -1856,7 +1856,7 @@ def render_home():
         render_overview()
 
     with tab_individual:
-        st.subheader("Analyse individuelle des joueurs")
+        st.markdown('''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Analyse individuelle des joueurs</h2>''', unsafe_allow_html=True)
         analysis_type = st.radio(
             "Choisissez une analyse :",
             ("Analyse par joueur", "Comparaisons", "Rôles et Profils"),
@@ -1870,7 +1870,7 @@ def render_home():
             analyze_player_roles()
 
     with tab_collective:
-        st.subheader("Analyse collective et tactique")
+        st.markdown('''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Analyse collective et tactique</h2>''', unsafe_allow_html=True)
         analysis_type = st.radio(
             "Choisissez une analyse :",
             ("Analyse par position", "Analyse Tactique", "Forces et Faiblesses", "Dynamiques d'Équipe", "Patterns Tactiques", "Analyse Défensive"),
