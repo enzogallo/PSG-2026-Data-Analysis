@@ -1,19 +1,47 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
 /* Styles globaux */
-html, body, .main, .stApp, [class^="css"] {
+html {
+    height: 100%;
+    margin: 0;
+    /* overflow: hidden; */ /* Empêche le défilement du body */
+    background: linear-gradient(rgba(12, 26, 42, 0.95), rgba(12, 26, 42, 0.95)), url('images/background.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-attachment: fixed !important;
+}
+
+body {
+    height: 100%;
+    margin: 0;
+    background: transparent !important;
+    color: white !important; /* Le texte du body doit être blanc */
+}
+
+/* Appliquer la police et la couleur par défaut à tous les éléments Streamlit et génériques */
+html, body, .main, .stApp, [class^="css"],
+[data-testid],
+.st-emotion-cache-,
+[data-baseweb]
+{
     font-family: 'Poppins', sans-serif !important;
     color: white !important; /* Texte blanc par défaut pour contraster avec le fond */
 }
 
-body {
-    color: white !important; /* Le texte du body doit être blanc */
-    background: #0C1A2A !important; /* Bleu foncé PSG sobre */
+/* Rendre tous les conteneurs et fonds Streamlit transparents */
+.stApp, .main, .main > div,
+[data-testid],
+.st-emotion-cache-,
+[data-baseweb]
+{
+    background: transparent !important;
 }
 
+/* Assurer que le contenu principal peut défiler */
 .main > div {
-    background: #0C1A2A !important;
-    padding: 0 !important; /* Ajuste le padding si nécessaire */
+    height: 100vh; /* Assure que le contenu prend toute la hauteur pour que le scrollbar apparaisse sur le contenu et non sur le body */
+    overflow-y: auto; /* Permet le défilement du contenu */
+    padding: 1.5rem !important; /* Ajoute un padding général au contenu principal */
 }
 
 /* Headers */
@@ -373,4 +401,17 @@ div.stButton > button, .stSlider {
     justify-content: center !important;
     align-items: center !important;
     width: 100% !important; /* Assurez-vous que le conteneur prend toute la largeur disponible */
+}
+
+/* Styles pour les graphiques Plotly */
+.stPlotlyChart, .js-plotly-plot, .plotly, .plotly .plot-container .svg-container, .plotly .main-svg {
+    background-color: transparent !important;
+}
+
+.plotly .plot-bgcolor {
+    fill: transparent !important;
+}
+
+.plotly .paper-bgcolor {
+    fill: transparent !important;
 }

@@ -437,8 +437,8 @@ def render_position_analysis():
         'Gls', 'Ast', 'Gls', 'Min',
         f'Buts vs Passes décisives - {position_names[selected_position]}',
         ['Gls', 'Ast', 'xG', 'xAG', 'Min']
-    )
-    
+        )
+
     st.plotly_chart(fig, use_container_width=True)
 
 def render_comparisons():
@@ -758,24 +758,24 @@ def analyze_player_roles():
              st.text("Tirs cadrés : N/A")
 
     with col3:
-         if not player_passing_data.empty and 'Cmp%' in player_passing_data.iloc[0]:
+        if not player_passing_data.empty and 'Cmp%' in player_passing_data.iloc[0]:
              st.metric("Précision des passes", f"{player_passing_data.iloc[0]['Cmp%']}% ")
-         else:
+        else:
              st.text("Précision des passes : N/A")
 
-         if not player_passing_data.empty and 'PrgP' in player_passing_data.iloc[0]:
+        if not player_passing_data.empty and 'PrgP' in player_passing_data.iloc[0]:
              st.metric("Passes progressives", player_passing_data.iloc[0]['PrgP'])
-         else:
+        else:
              st.text("Passes progressives : N/A")
 
-         if not player_passing_data.empty and 'KP' in player_passing_data.iloc[0]:
+        if not player_passing_data.empty and 'KP' in player_passing_data.iloc[0]:
               st.metric("Passes clés", player_passing_data.iloc[0]['KP'])
-         else:
+        else:
               st.text("Passes clés : N/A")
 
-         if not player_passing_data.empty and 'CrsPA' in player_passing_data.iloc[0]:
+        if not player_passing_data.empty and 'CrsPA' in player_passing_data.iloc[0]:
              st.metric("Centres", player_passing_data.iloc[0]['CrsPA'])
-         else:
+        else:
              st.text("Centres : N/A")
 
 def analyze_team_dynamics():
@@ -1814,7 +1814,7 @@ def analyze_ucl_performance():
 def render_home():
     # Enveloppement du logo et du titre dans un conteneur centré via HTML/CSS
     centered_header = """
-    <div style='text-align: center; background: linear-gradient(135deg, #0C1A2A 0%, #8B0000 100%); padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0;'>
+    <div style='text-align: center; background: none; padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0;'>
         <img src='https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg' width='100' style='display: block; margin: 0 auto;'>
         <h1 style='text-align: center; color: white; font-size: 2.2em;'>PSG Data Center - Saison 2024-2025</h1>
     </div>
@@ -2020,7 +2020,7 @@ def analyze_ucl_match_performance():
             barmode='group',
             xaxis_title='Match',
             yaxis_title='Nombre',
-            showlegend=True,
+                showlegend=True,
             xaxis=dict(tickangle=45)
         )
         
