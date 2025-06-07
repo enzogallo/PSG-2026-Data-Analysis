@@ -1174,7 +1174,7 @@ def analyze_goalkeeping_performance():
     selected_gk_data = goalkeepers[goalkeepers['Player'] == selected_gk].iloc[0]
     
     # Affichage de la photo du gardien et des métriques côte à côte
-    col_photo_gk, space, col_metrics_gk = st.columns([1.5, 0.5, 3]) # Ajuster les proportions si nécessaire
+    col_photo_gk, space, col_metrics_gk, space = st.columns([1.5, 0.5, 3, 0.5]) # Ajuster les proportions si nécessaire
 
     with col_photo_gk:
         # Affichage de la photo du gardien

@@ -339,7 +339,7 @@ div[data-testid="stRadio"] label[data-selected="true"] {
 
 /* Hover pour non-sélectionnées */
 div[data-testid="stRadio"] label:not([data-selected="true"]):hover {
-    background-color: rgba(255, 255, 255, 0.2) !important; /* Légèrement plus opaque au survol */
+    background-color: rgba(139, 0, 0, 0.2) !important; /* Légèrement plus opaque au survol */
     border: none !important;
 }
 
@@ -430,25 +430,61 @@ div.stButton > button, .stSlider {
 }
 
 /* Styles spécifiques pour le selectbox afin de résoudre le "bouton blanc" */
-.stSelectbox [data-baseweb="select"] > div[role="button"] {
+.stSelectbox [data-baseweb="select"] > div[role="button"],
+.stMultiSelect [data-baseweb="select"] > div[role="button"] { /* Ajouté pour le multiselect */
     background-color: rgba(255, 255, 255, 0.05) !important; /* S'assurer que le fond est cohérent */
-    border: 1px solid rgba(255, 255, 255, 0.2) !important; /* S'assurer que la bordure est cohérente */
+    border: 1px solid #8B0000 !important; /* Changé en rouge PSG */
     border-radius: 8px !important; /* S'assurer que le rayon de la bordure est cohérent */
     color: white !important; /* S'assurer que le texte est blanc */
 }
 
+/* Focus state pour selectbox et multiselect */
+.stSelectbox [data-baseweb="select"] > div[role="button"]:focus,
+.stMultiSelect [data-baseweb="select"] > div[role="button"]:focus {
+    border-color: #FF4500 !important; /* Rouge légèrement plus vif au focus */
+    box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.3) !important;
+    outline: none !important;
+}
+
 /* Cacher explicitement tout marqueur de liste ou pseudo-élément par défaut */
 .stSelectbox [data-baseweb="select"] > div[role="button"]::before,
-.stSelectbox [data-baseweb="select"] > div[role="button"]::after {
+.stSelectbox [data-baseweb="select"] > div[role="button"]::after,
+.stMultiSelect [data-baseweb="select"] > div[role="button"]::before, /* Ajouté pour le multiselect */
+.stMultiSelect [data-baseweb="select"] > div[role="button"]::after { /* Ajouté pour le multiselect */
     content: none !important;
 }
 
 /* S'assurer qu'aucun enfant direct dans la zone du bouton n'a de style de liste par défaut */
-.stSelectbox [data-baseweb="select"] > div[role="button"] > * {
+.stSelectbox [data-baseweb="select"] > div[role="button"] > *,
+.stMultiSelect [data-baseweb="select"] > div[role="button"] > * { /* Ajouté pour le multiselect */
     list-style: none !important;
 }
 
 /* Styliser la flèche déroulante si c'est un SVG */
-.stSelectbox [data-baseweb="select"] > div[role="button"] svg {
+.stSelectbox [data-baseweb="select"] > div[role="button"] svg,
+.stMultiSelect [data-baseweb="select"] > div[role="button"] svg { /* Ajouté pour le multiselect */
     fill: white !important; /* Rendre la flèche blanche */
+}
+
+/* Styles pour la liste déroulante du selectbox/multiselect (quand ouverte) */
+[data-baseweb="popover"] {
+    background-color: #0C1A2A !important; /* Fond sombre pour la liste déroulante */
+    border: 1px solid #8B0000 !important; /* Bordure rouge */
+    border-radius: 8px !important;
+}
+
+[data-baseweb="menuitem"] {
+    color: white !important; /* Texte blanc pour les options */
+    background-color: transparent !important; /* Fond transparent par défaut */
+}
+
+[data-baseweb="menuitem"]:hover {
+    background-color: rgba(139, 0, 0, 0.4) !important; /* Rouge foncé semi-transparent au survol */
+    color: white !important; /* Texte blanc au survol */
+}
+
+/* Pour les options sélectionnées */
+[data-baseweb="menuitem"][aria-selected="true"] {
+    background-color: #8B0000 !important; /* Rouge PSG pour l'option sélectionnée */
+    color: white !important; /* Texte blanc pour l'option sélectionnée */
 }
