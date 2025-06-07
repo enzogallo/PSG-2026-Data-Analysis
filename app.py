@@ -311,6 +311,7 @@ def render_player_analysis():
     field_players_standard = data['field_players_standard'].copy()
     field_players_shooting = data['field_players_shooting'].copy()
     field_players_passing = data['field_players_passing'].copy()
+    field_players_possession = data['field_players_possession'].copy()
 
     # Sélection du joueur (parmi les joueurs de champ)
     player_names = field_players_standard['Player'].tolist()
@@ -320,10 +321,10 @@ def render_player_analysis():
     photo_path = get_player_photo(selected_player)
     if photo_path:
         try:
-            col1, col2 = st.columns([1, 3])
+            col1, col2, col3, col4 = st.columns([2, 0.5, 3, 1])
             with col1:
-                st.image(photo_path, width=200, use_container_width=True)
-            with col2:
+                st.image(photo_path, width=800, use_container_width=True)
+            with col3:
                 st.markdown(f'''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Analyse de {selected_player}</h2>''', unsafe_allow_html=True)
                 
                 # Informations de base
@@ -332,6 +333,13 @@ def render_player_analysis():
                 if player_data.empty:
                     st.warning(f"Aucune donnée trouvée pour {selected_player} dans les statistiques standard.")
                     return
+
+                # Fusionner avec les données de possession pour avoir toutes les métriques
+                player_possession_data = field_players_possession[field_players_possession['Player'] == selected_player]
+                if not player_possession_data.empty:
+                    player_data = pd.merge(player_data, player_possession_data, on='Player', how='left', suffixes=('_standard', '_possession'))
+                else:
+                    st.warning(f"Aucune donnée de possession trouvée pour {selected_player}.")
 
                 player_data = player_data.iloc[0] # Récupérer la ligne unique si elle existe
 
@@ -368,6 +376,8 @@ def render_player_analysis():
                         st.text("Passes progressives : N/A")
                         st.text("Passes clés : N/A")
                         st.text("Centres : N/A")
+
+                
         except Exception as e:
             st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
             st.subheader(f"Analyse de {selected_player}")
@@ -397,8 +407,76 @@ def render_player_analysis():
         barmode='group',
         showlegend=True
     )
+    
 
     st.plotly_chart(fig_offensive, use_container_width=True)
+
+    # Graphique radar des performances défensives
+    st.markdown('''<h2 style='color: white; font-size: 1.8rem; font-weight: 700; font-family: "Poppins", sans-serif;'>Performance défensive</h2>''', unsafe_allow_html=True)
+    
+    # Création du graphique radar
+    defensive_metrics = {
+        'Touches défensives': float(player_data['Def 3rd']) if 'Def 3rd' in player_data else 0,
+        'Dribbles subis': float(player_data['Tkld']) if 'Tkld' in player_data else 0,
+        'Dribbles réussis': float(player_data['Succ']) if 'Succ' in player_data else 0,
+        'Cartons jaunes': float(player_data['CrdY']) if 'CrdY' in player_data else 0,
+        'Cartons rouges': float(player_data['CrdR']) if 'CrdR' in player_data else 0,
+        'Touches totales': float(player_data['Touches']) if 'Touches' in player_data else 0
+    }
+
+    # Normalisation des valeurs pour le radar chart
+    max_values = {
+        'Touches défensives': 2000,
+        'Dribbles subis': 100,
+        'Dribbles réussis': 100,
+        'Cartons jaunes': 10,
+        'Cartons rouges': 2,
+        'Touches totales': 4000
+    }
+
+    normalized_values = {
+        metric: (value / max_values[metric]) * 100 
+        for metric, value in defensive_metrics.items()
+    }
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatterpolar(
+        r=list(normalized_values.values()),
+        theta=list(normalized_values.keys()),
+        fill='toself',
+        name=selected_player,
+        line_color='#8B0000'
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                showticklabels=True,
+                tickfont=dict(color='white')
+            )
+        ),
+        showlegend=False,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='white'),
+        margin=dict(l=50, r=50, t=50, b=50)
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Légende des performances
+    st.markdown("""
+    **Légende des performances défensives :**
+    - Touches défensives : Nombre de touches dans le tiers défensif
+    - Dribbles subis : Nombre de dribbles subis
+    - Dribbles réussis : Nombre de dribbles réussis
+    - Cartons jaunes : Nombre de cartons jaunes reçus
+    - Cartons rouges : Nombre de cartons rouges reçus
+    - Touches totales : Nombre total de touches du ballon
+    """)
 
 def render_position_analysis():
     """Affiche l'analyse par position"""
@@ -1058,7 +1136,7 @@ def analyze_goalkeeping_performance():
     selected_gk_data = goalkeepers[goalkeepers['Player'] == selected_gk].iloc[0]
     
     # Affichage de la photo du gardien et des métriques côte à côte
-    col_photo_gk, col_metrics_gk = st.columns([1, 3]) # Ajuster les proportions si nécessaire
+    col_photo_gk, space, col_metrics_gk = st.columns([1.5, 0.5, 3]) # Ajuster les proportions si nécessaire
 
     with col_photo_gk:
         # Affichage de la photo du gardien
@@ -1350,10 +1428,10 @@ def analyze_ucl_progression():
     
     st.plotly_chart(fig_goals, use_container_width=True)
     
-    # Graphique de progression des actions de création
+    # Graphique de progression des Créations d'actions
     fig_creation = go.Figure()
     fig_creation.add_trace(go.Scatter(
-        name='Actions de création',
+        name='Créations d\'actions',
         x=progression_df['Match'],
         y=progression_df['SCA'],
         mode='lines+markers',
@@ -1362,7 +1440,7 @@ def analyze_ucl_progression():
         hovertemplate="Match: %{x}<br>Score: %{text}<br>SCA: %{y}<extra></extra>"
     ))
     fig_creation.add_trace(go.Scatter(
-        name='Actions de création de buts',
+        name='Créations d\'actions de buts',
         x=progression_df['Match'],
         y=progression_df['GCA'],
         mode='lines+markers',
@@ -1372,7 +1450,7 @@ def analyze_ucl_progression():
     ))
     
     fig_creation.update_layout(
-        title='Progression des actions de création',
+        title='Progression des Créations d\'actions',
         xaxis_title='Match',
         yaxis_title='Valeur',
                     showlegend=True,
@@ -1520,13 +1598,13 @@ def analyze_ucl_key_players():
     
     fig_creators = go.Figure()
     fig_creators.add_trace(go.Bar(
-        name='Actions de création',
+        name='Créations d\'actions',
         x=top_creators['Player'],
         y=top_creators['SCA'],
         marker_color='#9467bd'
     ))
     fig_creators.add_trace(go.Bar(
-        name='Actions de création de buts',
+        name='Créations d\'actions de buts',
         x=top_creators['Player'],
         y=top_creators['GCA'],
         marker_color='#8c564b'
@@ -1573,14 +1651,14 @@ def analyze_ucl_player_match():
     player_data = player_data_for_match.iloc[0]
     
     # --- Affichage de la photo et des métriques côte à côte ---
-    col_photo_ucl, col_metrics_ucl = st.columns([1, 3]) # Ajuster les proportions si nécessaire
+    col_photo_ucl, space, col_metrics_ucl, space = st.columns([2, 0.5, 3, 1]) # Ajuster les proportions si nécessaire
 
     with col_photo_ucl:
         # Affichage de la photo du joueur
         photo_path = get_player_photo(selected_player)
         if photo_path:
             try:
-                st.image(photo_path, width=200, use_container_width=True)
+                st.image(photo_path, width=400, use_container_width=True)
             except Exception as e:
                 st.error(f"Erreur lors de l'affichage de la photo : {str(e)}")
         # Optionnel : Afficher le nom du joueur sous la photo
@@ -1601,12 +1679,16 @@ def analyze_ucl_player_match():
         with col2_stats:
             st.metric("Passes décisives", int(player_data['Ast']))
             st.metric("xAG", f"{player_data['xAG']:.2f}")
-            st.metric("Actions de création", player_data['SCA'])
-            st.metric("Actions de création de buts", player_data['GCA'])
+            st.metric("Passes progressives", player_data['PrgP'])
+            st.metric("Créations d'actions", player_data['SCA'])
+            st.metric("Créations d'actions de buts", player_data['GCA'])
         
         with col3_stats:
-            st.metric("Passes progressives", player_data['PrgP'])
             st.metric("Progression portée", player_data['PrgC'])
+            st.metric("Tacles", player_data['Tkl'] if 'Tkl' in player_data else 0)
+            st.metric("Interceptions", player_data['Int'] if 'Int' in player_data else 0)
+            st.metric("Tirs bloqués", player_data['Blocks'] if 'Blocks' in player_data else 0)
+            st.metric("Dégagements", player_data['Clr'] if 'Clr' in player_data else 0)
     
     # Graphique radar des performances (reste en dessous)
     st.write("### Profil de performance")
@@ -1619,7 +1701,12 @@ def analyze_ucl_player_match():
         'SoT': player_data['SoT'],
         'SCA': player_data['SCA'],
         'GCA': player_data['GCA'],
-        'PrgP': player_data['PrgP']
+        'PrgP': player_data['PrgP'],
+        'Tkl': player_data['Tkl'] if 'Tkl' in player_data else 0,
+        'Int': player_data['Int'] if 'Int' in player_data else 0,
+        'Blocks': player_data['Blocks'] if 'Blocks' in player_data else 0,
+        'Clr': player_data['Clr'] if 'Clr' in player_data else 0,
+        'Touches': player_data['Touches'] if 'Touches' in player_data else 0
     }
     
     display_names = {
@@ -1628,9 +1715,14 @@ def analyze_ucl_player_match():
         'xG': 'xG',
         'xAG': 'xAG',
         'SoT': 'Tirs cadrés',
-        'SCA': 'Actions de création',
-        'GCA': 'Actions de création de buts',
-        'PrgP': 'Passes progressives'
+        'SCA': 'Créations d\'actions',
+        'GCA': 'Créations d\'actions de buts',
+        'PrgP': 'Passes progressives',
+        'Tkl': 'Tacles',
+        'Int': 'Interceptions',
+        'Blocks': 'Tirs bloqués',
+        'Clr': 'Dégagements',
+        'Touches': 'Touches'
     }
     
     max_values = {
@@ -1641,7 +1733,12 @@ def analyze_ucl_player_match():
         'SoT': 5,
         'SCA': 8,
         'GCA': 3,
-        'PrgP': 15
+        'PrgP': 15,
+        'Tkl': 5,
+        'Int': 5,
+        'Blocks': 3,
+        'Clr': 5,
+        'Touches': 100
     }
     
     normalized_metrics = {display_names[k]: (v / max_values[k]) * 100 for k, v in metrics.items()}
@@ -1670,11 +1767,13 @@ def analyze_ucl_player_match():
     # Comparaison avec la moyenne de l'équipe pour ce match
     st.write("### Comparaison avec la moyenne de l'équipe")
     
-    team_avg = match_data[metrics.keys()].mean()
+    # Filtrer les métriques pour n'inclure que celles présentes dans le DataFrame du match
+    available_metrics_keys = [k for k in metrics.keys() if k in match_data.columns]
+    team_avg = match_data[available_metrics_keys].mean()
     
     comparison_data = pd.DataFrame({
-        'Métrique': [display_names[k] for k in metrics.keys()],
-        'Joueur': list(metrics.values()),
+        'Métrique': [display_names[k] for k in available_metrics_keys],
+        'Joueur': [metrics[k] for k in available_metrics_keys],
         'Moyenne Équipe': team_avg.values
     })
     
@@ -1709,7 +1808,7 @@ def analyze_ucl_performance():
     
     analysis_type = st.radio(
         "Choisissez une analyse :",
-        ("Analyse Match par Match", "Progression dans la compétition", "Performances clés des joueurs", "Analyse détaillée par joueur"),
+        ("Analyse Match par Match", "Analyse détaillée par joueur", "Progression dans la compétition", "Performances clés des joueurs"),
         key="ucl_analysis_radio"
     )
     
@@ -1775,27 +1874,27 @@ def analyze_ucl_performance():
         
         st.plotly_chart(fig, use_container_width=True)
         
-        # Analyse des actions de création
-        st.subheader("Actions de création")
+        # Analyse des Créations d'actions
+        st.subheader("Créations d'actions")
         
         creation_data = match_data[['Player', 'SCA', 'GCA', 'PrgP', 'PrgC']]
         
         fig_creation = go.Figure()
         fig_creation.add_trace(go.Bar(
-            name='Actions de création',
+            name='Créations d\'actions',
             x=creation_data['Player'],
             y=creation_data['SCA'],
             marker_color='#2ca02c'
         ))
         fig_creation.add_trace(go.Bar(
-            name='Actions de création de buts',
+            name='Créations d\'actions de buts',
             x=creation_data['Player'],
             y=creation_data['GCA'],
             marker_color='#d62728'
         ))
         
         fig_creation.update_layout(
-            title=f'Actions de création par joueur - {selected_match} ({match_data["Score"].iloc[0]})',
+            title=f'Créations d\'actions par joueur - {selected_match} ({match_data["Score"].iloc[0]})',
             barmode='group',
             showlegend=True
         )
@@ -2051,3 +2150,4 @@ def analyze_ucl():
 
 if __name__ == "__main__":
     render_home()
+

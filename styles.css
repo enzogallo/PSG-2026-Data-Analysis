@@ -198,28 +198,32 @@ input, select, textarea,
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input
 {
-    border-radius: 6px;
-    padding: 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    background-color: rgba(255, 255, 255, 0.9) !important; /* Fond très légèrement transparent pour le champ sélectionné */
-    color: black !important; /* Texte en noir pour une excellente lisibilité */
+    color: white !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Couleur du texte pour le placeholder dans les inputs */
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus
+{
+    border-color: #034694 !important;
+    box-shadow: 0 0 0 2px rgba(3, 70, 148, 0.3) !important;
+    outline: none !important;
+}
+
 .stTextInput > div > div > input::placeholder,
 .stNumberInput > div > div > input::placeholder
 {
-    color: #666666 !important; /* Couleur grise pour le placeholder */
-}
-
-/* Couleur du texte pour le placeholder dans les selectbox (utilise ::before) */
-.stSelectbox > div > div > div > div > div::before {
-     color: #666666 !important; /* Couleur grise pour le placeholder */
+    color: rgba(255, 255, 255, 0.6) !important;
 }
 
 /* Couleur du texte pour les options dans le menu déroulant du selectbox */
 .stSelectbox > div > div[role="listbox"] div span {
-     color: black !important; /* Options en noir dans le menu déroulant */
+    color: white !important;
 }
 
 /* Assurer que le texte du label au-dessus des inputs/selects est blanc */
@@ -423,4 +427,28 @@ div.stButton > button, .stSlider {
 
 .plotly .paper-bgcolor {
     fill: transparent !important;
+}
+
+/* Styles spécifiques pour le selectbox afin de résoudre le "bouton blanc" */
+.stSelectbox [data-baseweb="select"] > div[role="button"] {
+    background-color: rgba(255, 255, 255, 0.05) !important; /* S'assurer que le fond est cohérent */
+    border: 1px solid rgba(255, 255, 255, 0.2) !important; /* S'assurer que la bordure est cohérente */
+    border-radius: 8px !important; /* S'assurer que le rayon de la bordure est cohérent */
+    color: white !important; /* S'assurer que le texte est blanc */
+}
+
+/* Cacher explicitement tout marqueur de liste ou pseudo-élément par défaut */
+.stSelectbox [data-baseweb="select"] > div[role="button"]::before,
+.stSelectbox [data-baseweb="select"] > div[role="button"]::after {
+    content: none !important;
+}
+
+/* S'assurer qu'aucun enfant direct dans la zone du bouton n'a de style de liste par défaut */
+.stSelectbox [data-baseweb="select"] > div[role="button"] > * {
+    list-style: none !important;
+}
+
+/* Styliser la flèche déroulante si c'est un SVG */
+.stSelectbox [data-baseweb="select"] > div[role="button"] svg {
+    fill: white !important; /* Rendre la flèche blanche */
 }
