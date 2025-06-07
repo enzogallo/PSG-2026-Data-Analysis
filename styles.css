@@ -8,11 +8,11 @@ html, body, .main, .stApp, [class^="css"] {
 
 body {
     color: white !important; /* Le texte du body doit être blanc */
-    background: linear-gradient(180deg, #034694 0%, #1E88E5 100%) !important; /* Dégradé de bleu foncé à bleu clair PSG */
+    background: #0C1A2A !important; /* Bleu foncé PSG sobre */
 }
 
 .main > div {
-    background: none !important; /* Supprime le fond blanc potentiellement ajouté par Streamlit */
+    background: #0C1A2A !important;
     padding: 0 !important; /* Ajuste le padding si nécessaire */
 }
 

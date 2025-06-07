@@ -218,41 +218,41 @@ def render_overview():
     field_player_data['Gls/90'] = (field_player_data['Gls'] * 90) / field_player_data['Min'].replace(0, np.nan)
     field_player_data['Ast/90'] = (field_player_data['Ast'] * 90) / field_player_data['Min'].replace(0, np.nan)
     
-    # Statistiques globales (joueurs de champ)
+    # Statistiques globales 
     col1, col2, col3 = st.columns(3)
     
     with col1:
         total_goals = field_player_data['Gls'].sum()
         total_assists = field_player_data['Ast'].sum()
-        st.metric("Buts marqués (Joueurs de champ)", int(total_goals))
-        st.metric("Passes décisives (Joueurs de champ)", int(total_assists))
+        st.metric("Buts marqués ", int(total_goals))
+        st.metric("Passes décisives ", int(total_assists))
     
     with col2:
         avg_xg = field_player_data['xG'].mean()
         avg_xag = field_player_data['xAG'].mean()
-        st.metric("xG moyen par joueur (Champ)", round(avg_xg, 2))
-        st.metric("xAG moyen par joueur (Champ)", round(avg_xag, 2))
+        st.metric("xG moyen par joueur ", round(avg_xg, 2))
+        st.metric("xAG moyen par joueur ", round(avg_xag, 2))
     
     with col3:
         total_minutes = field_player_data['Min'].sum()
         total_matches = field_player_data['MP'].sum()
-        st.metric("Minutes jouées (Champ)", int(total_minutes))
-        st.metric("Matches joués (Champ)", int(total_matches))
+        st.metric("Minutes jouées ", int(total_minutes))
+        st.metric("Matches joués ", int(total_matches))
     
-    # Top 5 buteurs (Joueurs de champ)
-    st.subheader("Top 5 Buteurs (Joueurs de champ)")
+    # Top 5 buteurs 
+    st.subheader("Top 5 Buteurs ")
     top_scorers = field_player_data.nlargest(5, 'Gls')[['Player', 'Gls', 'xG', 'Gls/90']]
     fig_scorers = px.bar(top_scorers, x='Player', y='Gls',
-                        title='Top 5 Buteurs (Joueurs de champ)',
+                        title='',
                         color='Gls',
                         color_continuous_scale='Blues')
     st.plotly_chart(fig_scorers, use_container_width=True)
     
-    # Top 5 passeurs (Joueurs de champ)
-    st.subheader("Top 5 Passeurs (Joueurs de champ)")
+    # Top 5 passeurs 
+    st.subheader("Top 5 Passeurs ")
     top_assists = field_player_data.nlargest(5, 'Ast')[['Player', 'Ast', 'xAG', 'Ast/90']]
     fig_assists = px.bar(top_assists, x='Player', y='Ast',
-                        title='Top 5 Passeurs (Joueurs de champ)',
+                        title='',
                         color='Ast',
                         color_continuous_scale='Greens')
     st.plotly_chart(fig_assists, use_container_width=True)
@@ -798,7 +798,7 @@ def analyze_team_dynamics():
     fig_scorers = px.bar(top_scorers, 
                         x='Player', 
                         y=['Gls', 'Ast'],
-                        title='Top 5 Buteurs et Leurs Passes Décisives',
+                        title='Top 5 buteurs et leurs passes décisives',
                         barmode='group',
                         color_discrete_sequence=['#1f77b4', '#ff7f0e'])
     
@@ -1481,7 +1481,7 @@ def analyze_ucl_key_players():
     ))
     
     fig_scorers.update_layout(
-        title='Top 5 Buteurs',
+        title='',
         barmode='group',
         showlegend=True
     )
@@ -1507,7 +1507,7 @@ def analyze_ucl_key_players():
     ))
     
     fig_assists.update_layout(
-        title='Top 5 Passeurs',
+        title='',
         barmode='group',
         showlegend=True
     )
@@ -1814,12 +1814,34 @@ def analyze_ucl_performance():
 def render_home():
     # Enveloppement du logo et du titre dans un conteneur centré via HTML/CSS
     centered_header = """
-    <div style='text-align: center;'>
+    <div style='text-align: center; background: linear-gradient(135deg, #0C1A2A 0%, #8B0000 100%); padding: 15px; border-top-left-radius: 20px; border-top-right-radius: 20px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0;'>
         <img src='https://upload.wikimedia.org/wikipedia/en/a/a7/Paris_Saint-Germain_F.C..svg' width='100' style='display: block; margin: 0 auto;'>
-        <h1 style='text-align: center;'>PSG Data Center - Saison 2024-2025</h1>
+        <h1 style='text-align: center; color: white; font-size: 2.2em;'>PSG Data Center - Saison 2024-2025</h1>
     </div>
     """
     st.markdown(centered_header, unsafe_allow_html=True)
+
+    # Style personnalisé pour les onglets
+    st.markdown("""
+        <style>
+        .stTabs [data-baseweb="tab-list"] {
+            background: linear-gradient(135deg, #0C1A2A 0%, #8B0000 100%);
+            border-top-left-radius: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            padding: 10px;
+            margin-top: -22px !important; /* Supprimer la marge négative */
+        }
+        .stTabs [data-baseweb="tab"] {
+            color: white;
+            font-weight: bold;
+        }
+        .stTabs [data-baseweb="tab-panel"] {
+            padding-top: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     # Onglets principaux regroupés
     tab_overview, tab_individual, tab_collective, tab_ucl, tab_goalkeeping = st.tabs([
